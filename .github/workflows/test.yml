@@ -39,4 +39,6 @@ jobs:
         run: nix develop --command bash -c "pnpm i --no-frozen-lockfile"
 
       - name: run-tests
-        run: nix develop --command bash -c "pnpm test"
+        run: |
+          cd $GITHUB_WORKSPACE
+          nix develop --run "npm ci && npm run test"
