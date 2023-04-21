@@ -2,6 +2,8 @@ import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryH
 import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
 import { Option } from './utils';
 
+export type ResourceAssessmentsResponse = Record<EntryHashB64, Assessment[]>
+
 export class SensemakerService {
   constructor(public client: AppAgentClient, public roleName: RoleName, public zomeName = 'sensemaker') {}
 
@@ -12,7 +14,7 @@ export class SensemakerService {
     myPubKey(): AgentPubKey {
       return this.client.myPubKey
     }
-    
+
 
   async createDimension(dimension: Dimension): Promise<EntryHash> {
     return this.callZome('create_dimension', dimension);
@@ -30,10 +32,10 @@ export class SensemakerService {
     return this.callZome('get_assessment', assessmentEh);
   }
 
-  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Record<EntryHashB64, Array<Assessment>>> {
+  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {
     return this.callZome('get_assessments_for_resources', getAssessmentsInput);
   }
-  
+
   async createMethod(method: Method): Promise<EntryHash> {
     return this.callZome('create_method', method);
   }
