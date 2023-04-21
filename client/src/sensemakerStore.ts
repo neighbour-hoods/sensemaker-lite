@@ -180,8 +180,12 @@ export class SensemakerStore {
     return assessmentEh
   }
 
-  async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getAssessment(assessmentEh)
+  async getAssessment(assessmentEh: EntryHash): Promise<Assessment> {
+    const assessment = await this.service.getAssessment(assessmentEh)
+
+    this.syncNewAssessments(encodeHashToBase64(assessment.resource_eh), new Set([assessment]))
+
+    return assessment
   }
 
   async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {

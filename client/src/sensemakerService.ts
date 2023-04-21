@@ -28,7 +28,7 @@ export class SensemakerService {
     return this.callZome('create_assessment', assessment);
   }
 
-  async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
+  async getAssessment(assessmentEh: EntryHash): Promise<Assessment> {
     return this.callZome('get_assessment', assessmentEh);
   }
 
