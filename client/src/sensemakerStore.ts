@@ -6,9 +6,23 @@ import { EntryHashMap } from '@holochain-open-dev/utils'
 import { Option } from './utils';
 import { createContext } from '@lit-labs/context';
 
-interface ContextResults {
+// zome API output types
+
+export interface ContextResults {
   [culturalContextName: string]: EntryHash[],
 }
+
+export interface ResourceAssessmentResults {
+  [entryHash: string]: Assessment[]
+}
+
+// SensemakerStore API inputs
+
+export interface assessmentsFilterOpts {
+  resourceEhs: Uint8Array[]
+  dimensionEhs: Uint8Array[]
+}
+
 export class SensemakerStore {
   // store any value here that would benefit from being a store
   // like cultural context entry hash and then the context result vec
