@@ -142,8 +142,7 @@ export class SensemakerStore {
     return await this.service.getAssessment(assessmentEh)
   }
 
-  // :TODO: rename this method? `loadAssessmentsForResources`?
-  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {
+  async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {
     const result = await this.service.getAssessmentsForResources(getAssessmentsInput);
 
     for (let [resourceEh, assessments] of Object.entries(result)) {
