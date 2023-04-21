@@ -15,7 +15,12 @@
   },
   "type": "module",
   "dependencies": {
-    "@holochain/client": "0.12.0"
+    "@holochain/client": "0.12.0",
+    "@lit-labs/context": "^0.3.0",
+    "immer": "^10.0.1",
+    "rxjs": "^7.8.0",
+    "svelte": "^3.58.0",
+    "svelte-fuse-rx": "^0.1.1"
   },
   "devDependencies": {
     "typescript": "^4.5.0"

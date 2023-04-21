@@ -1,3 +1,6 @@
+import { enableMapSet } from 'immer'
+enableMapSet()
+
 export * from "./dimension"
 export * from "./range"
 export * from "./resourceDef"
