@@ -27,6 +27,30 @@ export interface assessmentsFilterOpts {
 // TypeScript interface
 
 type AssessmentObservable = Observable<Set<Assessment>> & Writable<Set<Assessment>>
+type SingleAssessmentObservable = Observable<Assessment> & Writable<Assessment>
+
+// `Assessment` stream filtering helpers
+
+export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentObservable): AssessmentObservable => {
+  return assessments.pipe(map((as: Set<Assessment>) =>
+    produce(as, draft => {
+      as.forEach(a => {
+        if (encodeHashToBase64(a.dimension_eh) !== dimensionEh) {
+          draft.delete(a)
+        }
+      })
+    })
+  )) as AssessmentObservable
+}
+
+export const latestOf = (assessments: AssessmentObservable): SingleAssessmentObservable => {
+  return assessments.pipe(map((as: Set<Assessment>) =>
+    Array.from(as.values()).sort((a, b) => {
+      if (a.timestamp === b.timestamp) return 0
+      return a.timestamp < b.timestamp ? -1 : 1
+    }).pop() as Assessment
+  )) as SingleAssessmentObservable
+}
 
 // Store structure and zome API service bindings
 
@@ -90,6 +114,24 @@ export class SensemakerStore {
     }
 
     return result
+  }
+
+  /// Accessor method to observe all known `Assessments` for the given `resourceEh`
+  ///
+  assessmentsForResource(resourceEh: EntryHashB64): AssessmentObservable {
+    return this._resourceAssessments.get(resourceEh) || rxWritable(new Set())
+  }
+
+  /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`
+  ///
+  assessmentsForResourceDimension(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
+    return dimensionOf(dimensionEh, this.assessmentsForResource(resourceEh))
+  }
+
+  /// Accessor method to observe the *latest* `Assessment` for a given `resourceEh`, ranked within `dimensionEh`
+  ///
+  latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): SingleAssessmentObservable {
+    return latestOf(this.assessmentsForResourceDimension(resourceEh, dimensionEh))
   }
 
   protected allResourceAssessments() {
