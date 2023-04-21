@@ -231,7 +231,7 @@ export class SensemakerStore {
   }
 
   async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getCulturalContext(culturalContextEh) 
+    return await this.service.getCulturalContext(culturalContextEh)
   }
 
   async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<EntryHash>> {
@@ -258,8 +258,8 @@ export class SensemakerStore {
   }
 
   async updateAppletUIConfig(
-    resourceDefEh: EntryHashB64, 
-    currentObjectiveDimensionEh: EntryHash, 
+    resourceDefEh: EntryHashB64,
+    currentObjectiveDimensionEh: EntryHash,
     currentCreateAssessmentDimensionEh: EntryHash,
     currentMethodEh: EntryHash
   ) {
@@ -268,7 +268,7 @@ export class SensemakerStore {
         display_objective_dimension: currentObjectiveDimensionEh,
         create_assessment_dimension: currentCreateAssessmentDimensionEh,
         method_for_created_assessment: currentMethodEh
-      } 
+      }
       return appletUIConfig;
     }
     )
