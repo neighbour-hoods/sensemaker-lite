@@ -24,9 +24,9 @@ test("range CRUD tests", async (t) => {
     } = await setUpAliceandBob(false);
 
     const callZomeAlice = async (
-      zome_name,
-      fn_name,
-      payload,
+      zome_name: string,
+      fn_name: string,
+      payload: any,
       is_ss = false
     ) => {
       return await alice.appWs().callZome({

@@ -23,9 +23,9 @@ let app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { 
       } = await setUpAliceandBob(true, app_entry_def);
 
       const callZomeAlice = async (
-        zome_name,
-        fn_name,
-        payload,
+        zome_name: string,
+        fn_name: string,
+        payload: any,
         is_ss = false
       ) => {
         return await alice.appWs().callZome({
@@ -158,9 +158,9 @@ test("test updating of sensemaker config", async (t) => {
     } = await setUpAliceandBob(false, app_entry_def);
 
     const callZomeAlice = async (
-      zome_name,
-      fn_name,
-      payload,
+      zome_name: string,
+      fn_name: string,
+      payload: any,
       is_ss = false
     ) => {
       return await alice.appWs().callZome({

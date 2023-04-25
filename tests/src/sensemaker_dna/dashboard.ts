@@ -79,9 +79,9 @@ export const setUpAliceandBob = async (
       } = await setUpAliceandBob();
 
       const callZomeAlice = async (
-        zome_name,
-        fn_name,
-        payload,
+        zome_name: string,
+        fn_name: string,
+        payload: any,
         is_ss = false
       ) => {
         return await alice.appWs().callZome({
@@ -94,9 +94,9 @@ export const setUpAliceandBob = async (
         });
       };
       const callZomeBob = async (
-        zome_name,
-        fn_name,
-        payload,
+        zome_name: string,
+        fn_name: string,
+        payload: any,
         is_ss = false
       ) => {
         return await bob.appWs().callZome({
