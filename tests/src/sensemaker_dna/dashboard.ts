@@ -10,9 +10,8 @@ import {
 import { decode } from "@msgpack/msgpack";
 import { AppletConfig, Assessment, AssessmentWithDimensionAndResource, CreateAppletConfigInput, CreateAssessmentInput, Method, RangeValueInteger } from "@neighbourhoods/client";
 import { ok } from "assert";
-import pkg from "tape-promise/tape";
-import { installAgent, sampleAppletConfig } from "../../utils";
-const { test } = pkg;
+import test from "tape-promise/tape";
+import { installAgent, sampleAppletConfig } from "../utils";
 
 interface TestPost {
   title: string;
@@ -64,7 +63,6 @@ export const setUpAliceandBob = async (
   };
 };
 
-export default () => {
   test("test fetching dashboard data", async (t) => {
     await runScenario(async (scenario) => {
       const {
@@ -312,5 +310,3 @@ export default () => {
       await cleanAllConductors();
     });
   });
-};
-

@@ -2,14 +2,13 @@
 import { DnaSource, Record, ActionHash, AppBundleSource, AppEntryDef, EntryHash } from "@holochain/client";
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 import { decode } from '@msgpack/msgpack';
-import pkg from 'tape-promise/tape';
-const { test } = pkg;
+import test from "tape-promise/tape";
 
-import { sensemakerDna } from "../../utils";
+import { sensemakerDna } from "../utils";
 import { setUpAliceandBob } from "./neighbourhood";
 
 const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
-export default () => test("range CRUD tests", async (t) => {
+test("range CRUD tests", async (t) => {
   await runScenario(async scenario => {
     const {
       alice,
