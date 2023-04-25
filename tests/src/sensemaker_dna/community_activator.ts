@@ -1,12 +1,11 @@
 import { DnaSource, Record, ActionHash, EntryHash } from "@holochain/client";
 import { pause, runScenario, cleanAllConductors, createConductor, addAllAgentsToAllConductors } from "@holochain/tryorama";
 import { decode } from '@msgpack/msgpack';
-import pkg from 'tape-promise/tape';
-import { installAgent } from "../../utils";
+import test from "tape-promise/tape";
+import { installAgent } from "../utils";
 import { setUpAliceandBob } from "./neighbourhood";
-const { test } = pkg;
 
-export default () => test("test CA progenitor pattern", async (t) => {
+test("test CA progenitor pattern", async (t) => {
     await runScenario(async scenario => {
         const { alice, bob, alice_happs, bob_happs, alice_agent_key, bob_agent_key, ss_cell_id_alice, ss_cell_id_bob, provider_cell_id_alice, provider_cell_id_bob } = await setUpAliceandBob();
 

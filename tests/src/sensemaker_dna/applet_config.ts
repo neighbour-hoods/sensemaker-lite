@@ -1,14 +1,16 @@
-import { AppEntryDef, EntryHash } from "@holochain/client";
+type AppEntryDef = import('@holochain/client').AppEntryDef;
+type EntryHash = import('@holochain/client').EntryHash;
+
+import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, Dimension, Method, Range, Threshold } from "@neighbourhoods/client"
+
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 //@ts-ignore
-import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, Dimension, Method, Range, Threshold } from "@neighbourhoods/client";
-import pkg from "tape-promise/tape";
+import test from "tape-promise/tape";
 
-import { setUpAliceandBob } from "./neighbourhood";
-const { test } = pkg;
+import { setUpAliceandBob } from "../utils";
 
 const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
-export default () =>
+
     test("test Sensemaker Configuration", async (t) => {
         await runScenario(async (scenario) => {
             const {
@@ -272,4 +274,3 @@ export default () =>
             await cleanAllConductors();
         });
     });
-

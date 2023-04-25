@@ -1,4 +1,4 @@
-import { DnaSource, Record, ActionHash, EntryHash, EntryHashB64, encodeHashToBase64 } from "@holochain/client";
+import { Record, CellId, EntryHash, EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {
   pause,
   runScenario,
@@ -10,56 +10,9 @@ import {
 import { decode } from "@msgpack/msgpack";
 import { Assessment, CreateAssessmentInput, Method, RangeValueInteger, ResourceEh, GetAssessmentsForResourceInput, RangeValueFloat } from "@neighbourhoods/client";
 import { ok } from "assert";
-import pkg from "tape-promise/tape";
-import { installAgent } from "../../utils";
-const { test } = pkg;
+import test from "tape-promise/tape";
+import { setUpAliceandBob } from "../utils";
 
-export const setUpAliceandBob = async (
-  with_config: boolean = false,
-  resource_base_type?: any
-) => {
-  const alice = await createConductor();
-  const bob = await createConductor();
-  const {
-    agentsHapps: alice_happs,
-    agent_key: alice_agent_key,
-    ss_cell_id: ss_cell_id_alice,
-    provider_cell_id: provider_cell_id_alice,
-  } = await installAgent(
-    alice,
-    "alice",
-    undefined,
-    with_config,
-    resource_base_type
-  );
-  const {
-    agentsHapps: bob_happs,
-    agent_key: bob_agent_key,
-    ss_cell_id: ss_cell_id_bob,
-    provider_cell_id: provider_cell_id_bob,
-  } = await installAgent(
-    bob,
-    "bob",
-    alice_agent_key,
-    with_config,
-    resource_base_type
-  );
-  await addAllAgentsToAllConductors([alice, bob]);
-  return {
-    alice,
-    bob,
-    alice_happs,
-    bob_happs,
-    alice_agent_key,
-    bob_agent_key,
-    ss_cell_id_alice,
-    ss_cell_id_bob,
-    provider_cell_id_alice,
-    provider_cell_id_bob,
-  };
-};
-
-export default () => {
   test("SM entry type CRUD tests", async (t) => {
     await runScenario(async (scenario) => {
       const {
@@ -316,7 +269,7 @@ export default () => {
         t.ok(assessmentsForResources[encodeHashToBase64(createPostEntryHash)].find(assessment => JSON.stringify(assessment) === JSON.stringify({ ...createAssessment2, author: alice_agent_key, timestamp: assessment.timestamp })))
 
         const getAssessmentsForResourceInput2: GetAssessmentsForResourceInput = {};
-        
+
         assessmentsForResources = await callZomeBob(
           "sensemaker",
           "get_assessments_for_resources",
@@ -1276,7 +1229,7 @@ export default () => {
           author: alice_agent_key,
           timestamp: runMethodOutput.timestamp,
         };
-        
+
         t.deepEqual(
           objectiveAssessment,
           runMethodOutput
@@ -1512,7 +1465,7 @@ export default () => {
           author: alice_agent_key,
           timestamp: runMethodOutput.timestamp,
         };
-        
+
         t.deepEqual(
           objectiveAssessment,
           runMethodOutput

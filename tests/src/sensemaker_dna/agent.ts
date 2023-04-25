@@ -10,9 +10,8 @@ import {
 import { decode } from "@msgpack/msgpack";
 import { AppletConfig, Assessment, CreateAssessmentInput, Method, RangeValueInteger } from "@neighbourhoods/client";
 import { ok } from "assert";
-import pkg from "tape-promise/tape";
+import test from "tape-promise/tape";
 import { installAgent, sampleAppletConfig } from "../../utils";
-const { test } = pkg;
 
 interface TestPost {
   title: string;
@@ -138,7 +137,7 @@ export default () => {
         t.equal(encodeHashToBase64(agents[0]), encodeHashToBase64(alice_agent_key));
         console.log("agents", agents);
         await pause(pauseDuration);
-        
+
         agents = await callZomeAlice(
           "sensemaker",
           "get_all_agents",
