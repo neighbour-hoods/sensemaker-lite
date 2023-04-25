@@ -9,7 +9,12 @@ test("test CA progenitor pattern", async (t) => {
     await runScenario(async scenario => {
         const { alice, bob, alice_happs, bob_happs, alice_agent_key, bob_agent_key, ss_cell_id_alice, ss_cell_id_bob, provider_cell_id_alice, provider_cell_id_bob } = await setUpAliceandBob();
 
-        const callZomeAlice = async (zome_name, fn_name, payload, is_ss = false) => {
+      const callZomeAlice = async (
+        zome_name: string,
+        fn_name: string,
+        payload: any,
+        is_ss = false
+      ) => {
             return await alice.appWs().callZome({
                 cap_secret: null,
                 cell_id: is_ss ? ss_cell_id_alice : provider_cell_id_alice,
@@ -19,7 +24,12 @@ test("test CA progenitor pattern", async (t) => {
                 provenance: alice_agent_key
             });
         }
-        const callZomeBob = async (zome_name, fn_name, payload, is_ss = false) => {
+      const callZomeBob = async (
+        zome_name: string,
+        fn_name: string,
+        payload: any,
+        is_ss = false,
+      ) => {
             return await bob.appWs().callZome({
                 cap_secret: null,
                 cell_id: is_ss ? ss_cell_id_bob : provider_cell_id_bob,
