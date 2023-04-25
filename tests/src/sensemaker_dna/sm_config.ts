@@ -2,8 +2,7 @@ import { DnaSource, Record, ActionHash, EntryHash, AppEntryDef, encodeHashToBase
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 import { decode } from "@msgpack/msgpack";
 import test from "tape-promise/tape";
-import { setUpAliceandBob } from "./neighbourhood";
-import { AppletConfig } from "@neighbourhoods/client";
+import { setUpAliceandBob } from "../utils";
 
 let app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
 
