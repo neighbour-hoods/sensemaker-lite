@@ -1,4 +1,5 @@
 import test from "tape-promise/tape"
+import equal from 'fast-deep-equal/es6'
 import { TestScheduler } from 'rxjs/testing'
 import { of, filter, lastValueFrom } from 'rxjs'
 
@@ -7,7 +8,11 @@ import { Assessment } from '@neighbourhoods/client'
 
 test('it emits all values progressively loaded into resourceAssessments', async (t) => {
   const testScheduler = new TestScheduler((actual, expected) => {
-    return t.deepEqual(actual, expected)
+    if (!equal(actual, expected)) {
+      t.deepEqual(actual, expected)
+    } else {
+      t.ok(true, 'stream publishes expected values')
+    }
   })
 
   // configure mock data
