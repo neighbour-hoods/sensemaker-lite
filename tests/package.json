@@ -7,28 +7,26 @@
   "scripts": {
     "test": "npm run test:typecheck && npm run test:integration",
     "test:typecheck": "tsc -p ./tsconfig.json",
-    "test:integration": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ../node_modules/tape/bin/tape -r ../node_modules/tsx/dist/preflight.cjs src/**/*.ts | tap-dot"
+    "test:integration": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ./node_modules/tape/bin/tape -r ./node_modules/tsx/dist/preflight.cjs src/**/*.ts | tap-dot"
   },
   "author": "",
   "license": "CAL-1.0",
   "dependencies": {
     "@msgpack/msgpack": "^2.7.0",
-    "js-base64": "^3.6.1",
-    "lodash-es": "^4.17.21",
-    "path": "^0.12.7",
-    "tape": "^5.6.3",
-    "typescript": "^5.0.4",
-    "uuidv4": "^6.2.11"
+    "@neighbourhoods/client": "workspace:*"
   },
   "devDependencies": {
     "@holochain/client": "0.12.0",
     "@holochain/tryorama": "0.11.0",
-    "@neighbourhoods/client": "file:../client",
-    "@types/lodash": "^4.14.158",
     "@types/node": "^14.0.14",
     "@types/tape-promise": "^4.0.1",
+    "assert": "^2.0.0",
+    "rxjs": "^7.8.0",
+    "sinon": "^15.0.4",
     "tap-dot": "^2.0.0",
+    "tape": "^5.6.3",
     "tape-promise": "^4.0.0",
+    "typescript": "^5.0.4",
     "tsx": "^3.12.6"
   }
 }
