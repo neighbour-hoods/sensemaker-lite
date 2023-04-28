@@ -6,6 +6,7 @@ import {
   Assessment, AssessmentObservable,
   GetAssessmentsForResourceInput, ResourceAssessmentsResponse,
   RangeValue,
+  ResourceAssessmentResults,
 } from '@neighbourhoods/client'
 
 // @see https://crates.io/crates/holo_hash
@@ -43,9 +44,9 @@ const mockHash = (prefix) =>
 export const mockEh = () => mockHash(HOLOHASH_PREFIX_ENTRY)
 export const mockAgentKey = () => mockHash(HOLOHASH_PREFIX_AGENT)
 
-export const mockAssessment = (val: RangeValue) => ({
-  resource_eh: mockEh(),
-  dimension_eh: mockEh(),
+export const mockAssessment = (val: RangeValue, rEh?: Uint8Array, dEh?: Uint8Array) => ({
+  resource_eh: rEh || mockEh(),
+  dimension_eh: dEh || mockEh(),
   resource_def_eh: mockEh(),
   maybe_input_dataset: null,
   value: val,
@@ -53,17 +54,31 @@ export const mockAssessment = (val: RangeValue) => ({
   timestamp: Date.now(),
 })
 
+interface MockableStore extends SensemakerStore {
+  mockAssessments: (withAssessments: ResourceAssessmentsResponse) => void
+}
+interface MockedService extends SensemakerService {
+  _assessments: Assessment[]
+}
+
 export async function mockAssessmentsStore(withAssessments: ResourceAssessmentsResponse) {
   const pubKey = mockAgentKey()
   const serviceMock = {
+    _assessments: withAssessments,
+
     myPubKey() {
       return pubKey
     },
 
     async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Assessment[]> {
-      return Object.keys(withAssessments).flatMap(resourceEh => withAssessments[resourceEh])
+      return Object.keys(serviceMock._assessments).flatMap(resourceEh => serviceMock._assessments[resourceEh])
     },
   }
 
-  return new SensemakerStore(serviceMock as SensemakerService)
+  // @ts-ignore
+  const s: MockableStore = new SensemakerStore(serviceMock as MockedService)
+
+  s.mockAssessments = (withAssessments) => serviceMock._assessments = withAssessments
+
+  return s
 }
