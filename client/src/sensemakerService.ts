@@ -32,8 +32,10 @@ export class SensemakerService {
     return this.callZome('get_assessment', assessmentEh);
   }
 
-  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {
-    return this.callZome('get_assessments_for_resources', getAssessmentsInput);
+  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Assessment[]> {
+    const assessments: ResourceAssessmentsResponse = await this.callZome('get_assessments_for_resources', getAssessmentsInput);
+
+    return Object.keys(assessments).flatMap(resourceEh => assessments[resourceEh])
   }
 
   async createMethod(method: Method): Promise<EntryHash> {
