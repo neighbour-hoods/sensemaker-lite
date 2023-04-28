@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxWritable } from 'svelte-fuse-rx';
-import { merge, filter, map, Observable } from 'rxjs';
+import { mergeWith, filter, map, concatMap, from, groupBy, of, Subject, Observable } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -26,8 +26,7 @@ export interface assessmentsFilterOpts {
 
 // TypeScript interface
 
-type AssessmentObservable = Observable<Set<Assessment>> & Writable<Set<Assessment>>
-type SingleAssessmentObservable = Observable<Assessment> & Writable<Assessment>
+export type AssessmentObservable = Writable<Assessment> & Subject<Assessment> & Observable<Assessment>
 
 // `Assessment` stream filtering helpers
 
@@ -62,7 +61,7 @@ export class SensemakerStore {
   _contextResults: Writable<ContextResults> = writable({});
 
   // raw, unfiltered "source of truth" `Assessment` lists retrieved from zome APIs
-  _resourceAssessments: Map<EntryHashB64, AssessmentObservable> = new Map();
+  _resourceAssessments: AssessmentObservable = rxWritable(undefined).pipe(filter(v => v !== undefined)) as AssessmentObservable;
 
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
@@ -135,7 +134,7 @@ export class SensemakerStore {
   }
 
   protected allResourceAssessments() {
-    return rxWritable(new Set()).pipe(merge(...this._resourceAssessments.values()))
+    return this._resourceAssessments
   }
 
   appletConfig() {
@@ -175,7 +174,7 @@ export class SensemakerStore {
     // NOTE: there is currently a slight discrepancy between the assessment returned from the service and the one stored in the store
     // because we are not returning the assessment, and so recreating the timestamp. This works enough for now, but would be worth it to change
     // it to use optimistic updates such that a draft assessment can be propagated earlier and updated upon completion of the `createAssessment` API call.
-    this.syncNewAssessments(encodeHashToBase64(assessment.resource_eh), new Set([{ ...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000 }]))
+    this.syncNewAssessments([{ ...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000 }])
 
     return assessmentEh
   }
@@ -183,29 +182,21 @@ export class SensemakerStore {
   async getAssessment(assessmentEh: EntryHash): Promise<Assessment> {
     const assessment = await this.service.getAssessment(assessmentEh)
 
-    this.syncNewAssessments(encodeHashToBase64(assessment.resource_eh), new Set([assessment]))
+    this.syncNewAssessments([assessment])
 
     return assessment
   }
 
-  async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<ResourceAssessmentsResponse> {
+  async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Assessment[]> {
     const result = await this.service.getAssessmentsForResources(getAssessmentsInput);
 
-    for (let [resourceEh, assessments] of Object.entries(result)) {
-      this.syncNewAssessments(resourceEh, new Set(assessments))
-    }
+    this.syncNewAssessments(result)
 
     return result;
   }
 
-  protected syncNewAssessments(resourceEh: EntryHashB64, assessments: Set<Assessment>) {
-    const resourceAssessments: AssessmentObservable = this._resourceAssessments.get(resourceEh) || rxWritable(new Set())
-
-    resourceAssessments.update(existing => produce(existing, draft => {
-      assessments.forEach(draft.add)
-    }))
-
-    this._resourceAssessments.set(resourceEh, resourceAssessments)
+  protected syncNewAssessments(assessments: Assessment[]) {
+    assessments.forEach(this._resourceAssessments.next.bind(this._resourceAssessments))
   }
 
   async createMethod(method: Method): Promise<EntryHash> {
@@ -220,7 +211,7 @@ export class SensemakerStore {
   async runMethod(runMethodInput: RunMethodInput): Promise<Assessment> {
     const assessment = await this.service.runMethod(runMethodInput);
 
-    this.syncNewAssessments(encodeHashToBase64(assessment.resource_eh), new Set([assessment]))
+    this.syncNewAssessments([assessment])
 
     return assessment
   }
