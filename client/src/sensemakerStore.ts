@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxWritable } from 'svelte-fuse-rx';
-import { mergeWith, filter, map, concatMap, from, groupBy, of, Subject, Observable } from 'rxjs';
+import { mergeWith, filter, map, concatMap, from, groupBy, of, scan, tap, Subject, Observable } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -27,6 +27,8 @@ export interface assessmentsFilterOpts {
 // TypeScript interface
 
 export type AssessmentObservable = Writable<Assessment> & Subject<Assessment> & Observable<Assessment>
+
+export type AssessmentSetObservable = Writable<Set<Assessment>> & Subject<Set<Assessment>> & Observable<Set<Assessment>>
 
 // `Assessment` stream filtering helpers
 
@@ -62,8 +64,12 @@ export class SensemakerStore {
   _appletConfig: Writable<AppletConfig> = writable({ dimensions: {}, resource_defs: {}, methods: {}, cultural_contexts: {}, name: "", role_name: "", ranges: {} });
   _contextResults: Writable<ContextResults> = writable({});
 
-  // raw, unfiltered "source of truth" `Assessment` lists retrieved from zome APIs
-  _resourceAssessments: AssessmentObservable = rxWritable(undefined).pipe(filter(v => v !== undefined)) as AssessmentObservable;
+  // Raw, unfiltered "source of truth" `Assessment` stream retrieved from zome APIs
+  _resourceAssessments: AssessmentObservable
+
+  // Stream which emits complete set of all loaded `Assessments` after each update.
+  // Doubles as a local cache of all previously loaded `Assessments`.
+  _allResourceAssessments: AssessmentSetObservable
 
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
@@ -82,13 +88,21 @@ export class SensemakerStore {
   constructor(
     protected service: SensemakerService,
   ) {
+    this._resourceAssessments = rxWritable(undefined).pipe(
+      filter(v => v !== undefined),
+    ) as AssessmentObservable
+
+    this._allResourceAssessments = this._resourceAssessments.pipe(
+      scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
+    ) as AssessmentSetObservable
+
     this.myAgentPubKey = service.myPubKey();
   }
 
   /**
    * High-level API method for retrieving and filtering raw `Assessment` data from the Sensemaker backend
    */
-  resourceAssessments(opts?: assessmentsFilterOpts): AssessmentObservable {
+  resourceAssessments(opts?: assessmentsFilterOpts): AssessmentSetObservable {
     // if no filtering parameters provided, return a merged stream of all Assessments for all ResourceEhs
     // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
       return this.allResourceAssessments()
@@ -138,7 +152,7 @@ export class SensemakerStore {
   */
 
   protected allResourceAssessments() {
-    return this._resourceAssessments
+    return this._allResourceAssessments
   }
 
   appletConfig() {
