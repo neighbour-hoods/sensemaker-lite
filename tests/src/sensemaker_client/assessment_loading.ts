@@ -34,7 +34,7 @@ test('it emits all values progressively loaded into resourceAssessments', async 
   await store.loadAssessmentsForResources({ resource_ehs: [r1] })
 
   const expectedMarbles1 = 'a'
-  const expectedValues1 = { a: a1 }
+  const expectedValues1 = { a: new Set([a1]) }
 
   testScheduler.run(({ expectObservable, flush }) => {
     expectObservable(observed).toBe(expectedMarbles1, expectedValues1)
@@ -47,7 +47,7 @@ test('it emits all values progressively loaded into resourceAssessments', async 
   await store.loadAssessmentsForResources({ resource_ehs: [r2] })
 
   const expectedMarbles2 = 'a'
-  const expectedValues2 = { a: a2 }
+  const expectedValues2 = { a: new Set([a1, a2]) }
 
   testScheduler.run(({ expectObservable, flush }) => {
     expectObservable(observed).toBe(expectedMarbles2, expectedValues2)
@@ -58,8 +58,8 @@ test('it emits all values progressively loaded into resourceAssessments', async 
 
   const newlyObserved = store.resourceAssessments()
 
-  const expectedMarbles3 = 'ab'
-  const expectedValues3 = { a: a1, b: a2 }
+  const expectedMarbles3 = 'a'
+  const expectedValues3 = { a: new Set([a1, a2]) }
 
   testScheduler.run(({ expectObservable, flush }) => {
     expectObservable(newlyObserved).toBe(expectedMarbles3, expectedValues3)
