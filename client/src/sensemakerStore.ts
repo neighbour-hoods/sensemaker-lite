@@ -30,6 +30,7 @@ export type AssessmentObservable = Writable<Assessment> & Subject<Assessment> & 
 
 // `Assessment` stream filtering helpers
 
+/*
 export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentObservable): AssessmentObservable => {
   return assessments.pipe(map((as: Set<Assessment>) =>
     produce(as, draft => {
@@ -50,6 +51,7 @@ export const latestOf = (assessments: AssessmentObservable): SingleAssessmentObs
     }).pop() as Assessment
   )) as SingleAssessmentObservable
 }
+*/
 
 // Store structure and zome API service bindings
 
@@ -88,10 +90,11 @@ export class SensemakerStore {
    */
   resourceAssessments(opts?: assessmentsFilterOpts): AssessmentObservable {
     // if no filtering parameters provided, return a merged stream of all Assessments for all ResourceEhs
-    if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
+    // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
       return this.allResourceAssessments()
-    }
-
+  }
+    // }
+/*
     let result
 
     // start by filtering to relevant Resource/s; via different (sub)set of merged streams
@@ -132,6 +135,7 @@ export class SensemakerStore {
   latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): SingleAssessmentObservable {
     return latestOf(this.assessmentsForResourceDimension(resourceEh, dimensionEh))
   }
+  */
 
   protected allResourceAssessments() {
     return this._resourceAssessments
