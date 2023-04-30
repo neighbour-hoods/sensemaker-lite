@@ -22,7 +22,7 @@ test('it emits all values progressively loaded into resourceAssessments', async 
   const a1 = mockAssessment({ Integer: 1 }, r1)
   const a2 = mockAssessment({ Integer: 2 }, r2)
 
-  const store = await mockAssessmentsStore({ 'resource_001': [a1] })
+  const store = await mockAssessmentsStore({})
 
   // START TEST LOGIC
 
@@ -30,6 +30,7 @@ test('it emits all values progressively loaded into resourceAssessments', async 
 
   // Load some initial Assessment set from server
 
+  store.mockAssessments({ 'resource_001': [a1] })
   await store.loadAssessmentsForResources({ resource_ehs: [r1] })
 
   const expectedMarbles1 = 'a'
