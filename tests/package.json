@@ -7,7 +7,9 @@
   "scripts": {
     "test": "npm run test:typecheck && npm run test:integration",
     "test:typecheck": "tsc -p ./tsconfig.json",
-    "test:integration": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ./node_modules/tape/bin/tape -r ./node_modules/tsx/dist/preflight.cjs src/**/*.ts | tap-dot"
+    "test:integration": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ./node_modules/tape/bin/tape -r ./node_modules/tsx/dist/preflight.cjs src/**/*.ts | tap-dot",
+    "test:client": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ./node_modules/tape/bin/tape -r ./node_modules/tsx/dist/preflight.cjs src/sensemaker_client/**/*.ts | tap-dot",
+    "test:sensemaker": "TRYORAMA_LOG_LEVEL=debug RUST_BACKTRACE=1 RUST_LOG=holochain::core::ribosome::host_fn::debug=debug TRYORAMA_HOLOCHAIN_PATH=\"holochain\" TS_NODE_PROJECT=./tsconfig.json ./node_modules/tape/bin/tape -r ./node_modules/tsx/dist/preflight.cjs src/sensemaker_dna/**/*.ts | tap-dot"
   },
   "author": "",
   "license": "CAL-1.0",
