@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
-import { rxWritable } from 'svelte-fuse-rx';
-import { mergeWith, filter, map, concatMap, from, groupBy, of, scan, tap, Subject, Observable } from 'rxjs';
+import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
+import { mergeWith, filter, map, concatMap, from, groupBy, of, share, shareReplay, scan, tap, Subject, Observable, takeUntil, takeLast } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -32,6 +32,11 @@ export type AssessmentSetObservable = Writable<Set<Assessment>> & Subject<Set<As
 
 // `Assessment` stream filtering helpers
 
+export const asSet = (as: AssessmentObservable) =>
+  as.pipe(
+    scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
+  ) as AssessmentSetObservable
+
 /*
 export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentObservable): AssessmentObservable => {
   return assessments.pipe(map((as: Set<Assessment>) =>
@@ -58,18 +63,22 @@ export const latestOf = (assessments: AssessmentObservable): SingleAssessmentObs
 // Store structure and zome API service bindings
 
 export class SensemakerStore {
+  // unsubscribe stream to close all listeners
+  // :TODO: `_destroy.next()` should be called when Sensemaker context UI
+  // control is unmounted.
+  _destroy = new Subject()
+
   // store any value here that would benefit from being a store
   // like cultural context entry hash and then the context result vec
 
   _appletConfig: Writable<AppletConfig> = writable({ dimensions: {}, resource_defs: {}, methods: {}, cultural_contexts: {}, name: "", role_name: "", ranges: {} });
   _contextResults: Writable<ContextResults> = writable({});
 
-  // Raw, unfiltered "source of truth" `Assessment` stream retrieved from zome APIs
-  _resourceAssessments: AssessmentObservable
-
-  // Stream which emits complete set of all loaded `Assessments` after each update.
-  // Doubles as a local cache of all previously loaded `Assessments`.
-  _allResourceAssessments: AssessmentSetObservable
+  // Raw, unfiltered "source of truth" `Assessment` stream as `ReplaySubject`
+  // fed by asynchronous calls to zome APIs
+  _resourceAssessments: AssessmentObservable = rxWritable(undefined).pipe(
+    takeUntil(this._destroy),
+  )
 
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
@@ -88,14 +97,6 @@ export class SensemakerStore {
   constructor(
     protected service: SensemakerService,
   ) {
-    this._resourceAssessments = rxWritable(undefined).pipe(
-      filter(v => v !== undefined),
-    ) as AssessmentObservable
-
-    this._allResourceAssessments = this._resourceAssessments.pipe(
-      scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
-    ) as AssessmentSetObservable
-
     this.myAgentPubKey = service.myPubKey();
   }
 
@@ -105,7 +106,9 @@ export class SensemakerStore {
   resourceAssessments(opts?: assessmentsFilterOpts): AssessmentSetObservable {
     // if no filtering parameters provided, return a merged stream of all Assessments for all ResourceEhs
     // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
-      return this.allResourceAssessments()
+      // return this.allResourceAssessments()
+
+    return asSet(this._resourceAssessments)
   }
     // }
 /*
@@ -146,14 +149,10 @@ export class SensemakerStore {
 
   /// Accessor method to observe the *latest* `Assessment` for a given `resourceEh`, ranked within `dimensionEh`
   ///
-  latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): SingleAssessmentObservable {
+  latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
     return latestOf(this.assessmentsForResourceDimension(resourceEh, dimensionEh))
   }
   */
-
-  protected allResourceAssessments() {
-    return this._allResourceAssessments
-  }
 
   appletConfig() {
     return derived(this._appletConfig, appletConfig => appletConfig)

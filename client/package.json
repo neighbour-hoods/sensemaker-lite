@@ -20,7 +20,7 @@
     "immer": "^10.0.1",
     "rxjs": "^7.8.0",
     "svelte": "^3.58.0",
-    "svelte-fuse-rx": "^0.1.1"
+    "svelte-fuse-rx": "git://github.com/pospi/svelte-fuse-rx#feature/replay-subject"
   },
   "devDependencies": {
     "typescript": "^4.5.0"
