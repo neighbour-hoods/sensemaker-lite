@@ -39,8 +39,8 @@ test('it emits all values progressively loaded into resourceAssessments', async 
   store.mockAssessments({ 'resource_003': [a3] })
   await store.loadAssessmentsForResources({ resource_ehs: [r3] })
 
-  const expectedMarbles2 = 'a'
-  const expectedValues2 = { a: new Set([a1, a2, a3]) }
+  const expectedMarbles2 = 'abc'
+  const expectedValues2 = { a: new Set([a1]), b: new Set([a1, a2]), c: new Set([a1, a2, a3]) }
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observed).toBe(expectedMarbles2, expectedValues2)
