@@ -44,8 +44,8 @@ importers:
         specifier: ^3.58.0
         version: 3.58.0
       svelte-fuse-rx:
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: git://github.com/pospi/svelte-fuse-rx#feature/replay-subject
+        version: github.com/pospi/svelte-fuse-rx/c8a5d72bf2133c8c4f1eeb8bd672f4acca4a6be3
     devDependencies:
       typescript:
         specifier: ^4.5.0
@@ -1896,12 +1896,6 @@ packages:
     engines: {node: '>= 0.4'}
     dev: true
 
-  /svelte-fuse-rx@0.1.1:
-    resolution: {integrity: sha512-/zaRIS9b/uByvelQe9veerKdrguoC7c3/zrm8KsWeA1SuCFWEn73wuomkXAtSLC7k0ouIYt6271bTzP345HxPQ==}
-    dependencies:
-      rxjs: 7.8.0
-    dev: false
-
   /svelte@3.58.0:
     resolution: {integrity: sha512-brIBNNB76mXFmU/Kerm4wFnkskBbluBDCjx/8TcpYRb298Yh2dztS2kQ6bhtjMcvUhd5ynClfwpz5h2gnzdQ1A==}
     engines: {node: '>= 8'}
@@ -2231,3 +2225,13 @@ packages:
       y18n: 5.0.8
       yargs-parser: 20.2.9
     dev: true
+
+  github.com/pospi/svelte-fuse-rx/c8a5d72bf2133c8c4f1eeb8bd672f4acca4a6be3:
+    resolution: {tarball: https://codeload.github.com/pospi/svelte-fuse-rx/tar.gz/c8a5d72bf2133c8c4f1eeb8bd672f4acca4a6be3}
+    name: svelte-fuse-rx
+    version: 0.1.2
+    prepare: true
+    requiresBuild: true
+    dependencies:
+      rxjs: 7.8.0
+    dev: false
