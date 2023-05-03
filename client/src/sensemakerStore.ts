@@ -108,7 +108,9 @@ export class SensemakerStore {
     // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
       // return this.allResourceAssessments()
 
-    return asSet(this._resourceAssessments)
+    return asSet(this._resourceAssessments).pipe(
+      shareReplay(1),
+    ) as AssessmentSetObservable
   }
     // }
 /*
