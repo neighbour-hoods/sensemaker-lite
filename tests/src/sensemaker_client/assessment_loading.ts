@@ -34,7 +34,7 @@ test('it emits all values progressively loaded into resourceAssessments', async 
     expectObservable(observed).toBe(expectedMarbles1, expectedValues1)
   })
 
-  // Load an additional Assessment set from server, should emit newly returned data
+  // Load an additional Assessment set from server, should emit newly loaded data + initially loaded data
 
   store.mockAssessments({ 'resource_003': [a3] })
   await store.loadAssessmentsForResources({ resource_ehs: [r3] })
