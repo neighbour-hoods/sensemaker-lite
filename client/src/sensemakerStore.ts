@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { mergeWith, filter, map, concatMap, from, groupBy, of, share, shareReplay, scan, tap, Subject, Observable, takeUntil, takeLast } from 'rxjs';
+import { mergeWith, filter, map, concatMap, groupBy, shareReplay, scan, tap, Subject, Observable, takeUntil } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -35,6 +35,7 @@ export type AssessmentSetObservable = Writable<Set<Assessment>> & Subject<Set<As
 export const asSet = (as: AssessmentObservable) =>
   as.pipe(
     scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
+    shareReplay(1),
   ) as AssessmentSetObservable
 
 /*
@@ -80,6 +81,8 @@ export class SensemakerStore {
     takeUntil(this._destroy),
   )
 
+  _allResourceAssessments: AssessmentSetObservable
+
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
   /*
@@ -97,6 +100,8 @@ export class SensemakerStore {
   constructor(
     protected service: SensemakerService,
   ) {
+    this._allResourceAssessments = asSet(this._resourceAssessments)
+
     this.myAgentPubKey = service.myPubKey();
   }
 
@@ -108,9 +113,7 @@ export class SensemakerStore {
     // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
       // return this.allResourceAssessments()
 
-    return asSet(this._resourceAssessments).pipe(
-      shareReplay(1),
-    ) as AssessmentSetObservable
+    return this._allResourceAssessments
   }
     // }
 /*
