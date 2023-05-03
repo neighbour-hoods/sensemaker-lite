@@ -65,8 +65,6 @@ export const latestOf = (assessments: AssessmentObservable): SingleAssessmentObs
 
 export class SensemakerStore {
   // unsubscribe stream to close all listeners
-  // :TODO: `_destroy.next()` should be called when Sensemaker context UI
-  // control is unmounted.
   _destroy = new Subject()
 
   // store any value here that would benefit from being a store
@@ -289,6 +287,12 @@ export class SensemakerStore {
       return appletUIConfig;
     }
     )
+  }
+
+  // close all active streams, ending any straggling UI or dependant framework subscribers
+  // :TODO: this should be called when `sensemakerStoreContext` is released.
+  unmount() {
+    this._destroy.next(1)
   }
 }
 
