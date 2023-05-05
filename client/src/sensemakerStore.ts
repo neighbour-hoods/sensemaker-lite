@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { mergeWith, filter, map, concatMap, groupBy, shareReplay, scan, tap, Subject, Observable, takeUntil } from 'rxjs';
+import { filter, shareReplay, scan, Subject, Observable, takeUntil } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -20,8 +20,8 @@ export type ResourceAssessmentResults = Map<EntryHashB64, Set<Assessment>>
 // SensemakerStore API inputs
 
 export interface assessmentsFilterOpts {
-  resourceEhs: string[]
-  dimensionEhs: string[]
+  resourceEhs?: string[]
+  dimensionEhs?: string[]
 }
 
 // TypeScript interface
@@ -107,35 +107,27 @@ export class SensemakerStore {
    * High-level API method for retrieving and filtering raw `Assessment` data from the Sensemaker backend
    */
   resourceAssessments(opts?: assessmentsFilterOpts): AssessmentSetObservable {
-    // if no filtering parameters provided, return a merged stream of all Assessments for all ResourceEhs
-    // if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
-      // return this.allResourceAssessments()
+    // if no filtering parameters provided, return a merged Set of all Assessments
+    if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
+      return this._allResourceAssessments
+    }
 
-    return this._allResourceAssessments
-  }
-    // }
-/*
-    let result
+    let result = this._resourceAssessments
 
-    // start by filtering to relevant Resource/s; via different (sub)set of merged streams
     if (opts.resourceEhs) {
-      const streams: AssessmentObservable[] = []
-      for (let [k, stream] of this._resourceAssessments.entries()) {
-        if (opts.resourceEhs.includes(k)) {
-          streams.push(stream)
-        }
-      }
-      result = rxWritable(new Set()).pipe(merge(...streams))
-    } else {
-      result = this.allResourceAssessments()
+      const matches = opts.resourceEhs
+      result = result.pipe(
+        filter(a => matches.indexOf(encodeHashToBase64(a.resource_eh)) !== -1),
+      ) as AssessmentObservable
     }
-
-    // filter relevant Dimension/s sub-slice if specified
     if (opts.dimensionEhs) {
-      result = result.pipe(filter((a: Assessment) => opts.dimensionEhs.includes(encodeHashToBase64(a.dimension_eh))))
+      const matches = opts.dimensionEhs
+      result = result.pipe(
+        filter(a => matches.indexOf(encodeHashToBase64(a.dimension_eh)) !== -1),
+      ) as AssessmentObservable
     }
 
-    return result
+    return asSet(result)
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh`
