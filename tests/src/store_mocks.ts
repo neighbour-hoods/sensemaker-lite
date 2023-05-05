@@ -11,20 +11,36 @@ import {
   ResourceAssessmentResults,
 } from '@neighbourhoods/client'
 
-export const scheduler = (t) => new TestScheduler((actual, expected) => {
-  if (!equal(actual, expected)) {
-    // pull values out of stream for nicer comparison output if they are cause of the mismatch
-    const aVal = actual.map(a => Array.from(a.notification.value))
-    const eVal = expected.map(a => Array.from(a.notification.value))
-    if (!equal(aVal, eVal)) {
-      t.deepEqual(aVal, eVal, 'stream emitted incorrect values')
-    } else {
-      t.deepEqual(actual, expected, 'unexpected stream publication')
-    }
+const flattenFrames = (emitted) => emitted.reduce((fs, f) => {
+  const lastF = fs.length - 1
+  if (fs[lastF] && f.frame === fs[lastF].frame) {
+    fs[lastF] = f
   } else {
-    t.ok(true, 'stream publishes expected values')
+    fs.push(f)
   }
-})
+  return fs
+}, [])
+
+export const scheduler = (t) => {
+  const s = new TestScheduler((actual, expected) => {
+    // reduce over verbose stream output to collapse frame updates into single frames for assertions
+    actual = flattenFrames(actual)
+    expected = flattenFrames(expected)
+    if (!equal(actual, expected)) {
+      // pull values out of stream for nicer comparison output if they are cause of the mismatch
+      const aVal = actual.map(a => Array.from(a.notification.value))
+      const eVal = expected.map(a => Array.from(a.notification.value))
+      if (!equal(aVal, eVal)) {
+        t.deepEqual(aVal, eVal, 'stream emitted incorrect values')
+      } else {
+        t.deepEqual(actual, expected, 'unexpected stream publication')
+      }
+    } else {
+      t.ok(true, 'stream publishes expected values')
+    }
+  })
+  return s
+}
 
 // @see https://crates.io/crates/holo_hash
 const HOLOCHAIN_RAW_IDENTIFIER_LEN = 36
