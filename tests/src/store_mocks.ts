@@ -77,7 +77,7 @@ const mockHash = (prefix) => {
 export const mockEh = () => mockHash(HOLOHASH_PREFIX_ENTRY)
 export const mockAgentKey = () => mockHash(HOLOHASH_PREFIX_AGENT)
 
-export const mockAssessment = (val: RangeValue, rEh?: Uint8Array, dEh?: Uint8Array) => ({
+export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint8Array | 0) => ({
   resource_eh: rEh || mockEh(),
   dimension_eh: dEh || mockEh(),
   resource_def_eh: mockEh(),
