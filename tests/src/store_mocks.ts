@@ -78,6 +78,8 @@ const mockHash = (prefix) => {
 export const mockEh = () => mockHash(HOLOHASH_PREFIX_ENTRY)
 export const mockAgentKey = () => mockHash(HOLOHASH_PREFIX_AGENT)
 
+let timeOff = 0
+
 export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint8Array | 0, time: null | Timestamp = null) => ({
   resource_eh: rEh || mockEh(),
   dimension_eh: dEh || mockEh(),
@@ -85,7 +87,7 @@ export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint
   maybe_input_dataset: null,
   value: val,
   author: mockEh(),
-  timestamp: time || Date.now(),
+  timestamp: time || (Date.now() + (++timeOff * 1000)),
 })
 
 interface MockableStore extends SensemakerStore {
