@@ -2,6 +2,7 @@
 import { randomBytes } from 'crypto'
 import { TestScheduler } from 'rxjs/testing'
 import equal from 'fast-deep-equal/es6'
+import type { Timestamp } from '@holochain/client'
 
 import {
   SensemakerStore, SensemakerService,
@@ -77,14 +78,14 @@ const mockHash = (prefix) => {
 export const mockEh = () => mockHash(HOLOHASH_PREFIX_ENTRY)
 export const mockAgentKey = () => mockHash(HOLOHASH_PREFIX_AGENT)
 
-export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint8Array | 0) => ({
+export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint8Array | 0, time: null | Timestamp = null) => ({
   resource_eh: rEh || mockEh(),
   dimension_eh: dEh || mockEh(),
   resource_def_eh: mockEh(),
   maybe_input_dataset: null,
   value: val,
   author: mockEh(),
-  timestamp: Date.now(),
+  timestamp: time || Date.now(),
 })
 
 interface MockableStore extends SensemakerStore {
