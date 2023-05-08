@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, Timestamp } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { of, filter, shareReplay, scan, mergeScan, groupBy, takeUntil, withLatestFrom, Subject, Observable, GroupedObservable } from 'rxjs';
+import { of, filter, shareReplay, scan, map, mergeMap, mergeScan, groupBy, takeUntil, withLatestFrom, Subject, Observable, GroupedObservable, tap } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -26,9 +26,13 @@ export interface assessmentsFilterOpts {
 
 // TypeScript interface
 
-export type AssessmentObservable = Writable<Assessment> & Subject<Assessment> & Observable<Assessment>
+export type StoreObservable<T> = Writable<T> & Subject<T> & Observable<T>
 
-export type AssessmentSetObservable = Writable<Set<Assessment>> & Subject<Set<Assessment>> & Observable<Set<Assessment>>
+export type AssessmentObservable = StoreObservable<Assessment>
+
+export type AssessmentSetObservable = StoreObservable<Set<Assessment>>
+
+export type AssessmentDimensionsObservable = StoreObservable<Record<EntryHashB64, Assessment>>
 
 // `Assessment` stream filtering helpers
 
