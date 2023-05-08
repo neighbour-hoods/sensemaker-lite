@@ -73,8 +73,8 @@ test('it emits a filtered stream of resourceAssessments based on matching resour
   const a1 = mockAssessment({ Integer: 1 }, r1, d1),
     a2 = mockAssessment({ Integer: 2 }, 0, d2),
     a3 = mockAssessment({ Integer: 3 }, 0, d1),
-    a4 = mockAssessment({ Integer: 2 }),
-    a5 = mockAssessment({ Integer: 4 }, r1)
+    a4 = mockAssessment({ Integer: 4 }),
+    a5 = mockAssessment({ Integer: 5 }, r1)
 
   const store = await mockAssessmentsStore({
     'resource_001': [a1, a5],
@@ -122,9 +122,9 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
   const a1 = mockAssessment({ Integer: 1 }, r1, d1),
     a2 = mockAssessment({ Integer: 2 }, 0, d2),
     a3 = mockAssessment({ Integer: 3 }, 0, d1),
-    a4 = mockAssessment({ Integer: 2 }),
-    a5 = mockAssessment({ Integer: 4 }, r1),
-    a6 = mockAssessment({ Integer: 4 }, r1, d2)
+    a4 = mockAssessment({ Integer: 4 }),
+    a5 = mockAssessment({ Integer: 5 }, r1),
+    a6 = mockAssessment({ Integer: 6 }, r1, d2)
 
   const store = await mockAssessmentsStore({})
 
@@ -160,7 +160,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // 'latest' filtering operates as expected
 
-  const a7 = mockAssessment({ Integer: 4 }, r1, d2)
+  const a7 = mockAssessment({ Integer: 7 }, r1, d2)
   store.mockAssessments({ 'resource_003': [a7] })
   await store.loadAssessmentsForResources({})
 
@@ -172,7 +172,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // adding information updates the most recently emitted value
 
-  const a8 = mockAssessment({ Integer: 4 }, r1, d2)
+  const a8 = mockAssessment({ Integer: 8 }, r1, d2)
   store.mockAssessments({ 'resource_003': [a8] })
   await store.loadAssessmentsForResources({})
 
@@ -185,7 +185,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // outdated information does not cause an update
 
-  const a9 = mockAssessment({ Integer: 4 }, r1, d2, Date.now() - 3600000)
+  const a9 = mockAssessment({ Integer: 9 }, r1, d2, Date.now() - 3600000)
   store.mockAssessments({ 'resource_003': [a9] })
   await store.loadAssessmentsForResources({})
 
@@ -195,11 +195,14 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
     expectObservable(observing7).toBe('a', { a: a8 })
   })
 
-  // :TODO: more complex set-based accessor
+  // more complex set-based accessor
 
-  // const observing8 = store.latestAssessmentsOfDimensions(encodeHashToBase64(r1), [encodeHashToBase64(d2), encodeHashToBase64(d1)])
+  const observing8 = store.latestAssessmentsOfDimensions(encodeHashToBase64(r1), [encodeHashToBase64(d2), encodeHashToBase64(d1)])
 
-  // testScheduler.run(({ expectObservable }) => {
-  //   expectObservable(observing8).toBe('a', { a: a8 })
-  // })
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing8).toBe('a', { a: {
+      [encodeHashToBase64(d1)]: a1,
+      [encodeHashToBase64(d2)]: a8,
+    } })
+  })
 })
