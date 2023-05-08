@@ -72,7 +72,7 @@ export function latestOf<T>(returnNewest: (latest: T | null, a: T) => T) {
 }
 
 function getNewerAssessment(latest: Assessment | null, a: Assessment): Assessment {
-  return (!latest || latest.timestamp <= a.timestamp) ? a : latest
+  return (!latest || latest.timestamp < a.timestamp) ? a : latest
 }
 
 export const mostRecentAssessment: (as: AssessmentObservable) => AssessmentObservable = latestOf<Assessment>(getNewerAssessment)
