@@ -187,16 +187,18 @@ export class SensemakerStore {
 
   /// Accessor method to observe the *latest* `Assessment`s for a given `resourceEh`, ranked within all specified `dimensionEh`s
   ///
-  latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentSetObservable {
-    const dimensionsOfInterest = forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments)
-    return rxWritable(undefined).pipe(
-      withLatestFrom(dimensionsOfInterest.pipe(
-        groupBy(d => encodeHashToBase64(d.dimension_eh)),
+  latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentDimensionsObservable {
+    return forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(
+      groupBy((d: Assessment) => encodeHashToBase64(d.dimension_eh)),
+      mergeMap((group: GroupedObservable<EntryHashB64, Assessment>) => group.pipe(
+        map(g => ({ [group.key]: g }))
       )),
-      mergeScan((latest: Assessment | null, a: Assessment, i: number) => {
-        return of(getNewerAssessment(latest, a)) as AssessmentObservable
-      }, null),
-    )
+      mergeScan((dims: Record<EntryHashB64, Assessment>, a: Record<EntryHashB64, Assessment>, i: number) => {
+        Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
+        return of(dims)
+      }, {}),
+      shareReplay(1),
+    ) as AssessmentDimensionsObservable
   }
 
   appletConfig() {
