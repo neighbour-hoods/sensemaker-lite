@@ -1,7 +1,7 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { filter, shareReplay, scan, Subject, Observable, takeUntil } from 'rxjs';
+import { of, map, filter, shareReplay, scan, mergeScan, Subject, Observable, takeUntil } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -50,16 +50,20 @@ export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentOb
     })
   )) as AssessmentObservable
 }
-
-export const latestOf = (assessments: AssessmentObservable): SingleAssessmentObservable => {
-  return assessments.pipe(map((as: Set<Assessment>) =>
-    Array.from(as.values()).sort((a, b) => {
-      if (a.timestamp === b.timestamp) return 0
-      return a.timestamp < b.timestamp ? -1 : 1
-    }).pop() as Assessment
-  )) as SingleAssessmentObservable
-}
 */
+
+export const latestOf = (assessments: AssessmentObservable): AssessmentObservable =>
+  assessments.pipe(
+    mergeScan((latest: Assessment | null, a: Assessment, i: number) => {
+      if (!latest || latest.timestamp <= a.timestamp) return of(a)
+      return of(latest)
+    }, null),
+  ) as AssessmentObservable
+
+export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable): AssessmentObservable =>
+  assessments.pipe(
+    filter(a => resourceEh === encodeHashToBase64(a.resource_eh) && dimensionEh === encodeHashToBase64(a.dimension_eh)),
+  ) as AssessmentObservable
 
 // Store structure and zome API service bindings
 
@@ -132,22 +136,23 @@ export class SensemakerStore {
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh`
   ///
-  assessmentsForResource(resourceEh: EntryHashB64): AssessmentObservable {
-    return this._resourceAssessments.get(resourceEh) || rxWritable(new Set())
+  assessmentsForResource(resourceEh: EntryHashB64): AssessmentSetObservable {
+    return asSet(this._resourceAssessments.pipe(
+      filter(a => resourceEh === encodeHashToBase64(a.resource_eh)),
+    ) as AssessmentObservable)
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`
   ///
-  assessmentsForResourceDimension(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
-    return dimensionOf(dimensionEh, this.assessmentsForResource(resourceEh))
+  assessmentsForResourceDimension(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentSetObservable {
+    return asSet(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
   }
 
   /// Accessor method to observe the *latest* `Assessment` for a given `resourceEh`, ranked within `dimensionEh`
   ///
   latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
-    return latestOf(this.assessmentsForResourceDimension(resourceEh, dimensionEh))
+    return latestOf(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
   }
-  */
 
   appletConfig() {
     return derived(this._appletConfig, appletConfig => appletConfig)
