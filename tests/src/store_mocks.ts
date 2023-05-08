@@ -29,8 +29,8 @@ export const scheduler = (t) => {
     expected = flattenFrames(expected)
     if (!equal(actual, expected)) {
       // pull values out of stream for nicer comparison output if they are cause of the mismatch
-      const aVal = actual.map(a => Array.from(a.notification.value))
-      const eVal = expected.map(a => Array.from(a.notification.value))
+      const aVal = actual.map && actual.length ? actual.map(a => a.notification.value) : null
+      const eVal = expected.map && expected.length ? expected.map(a => a.notification.value) : null
       if (!equal(aVal, eVal)) {
         t.deepEqual(aVal, eVal, 'stream emitted incorrect values')
       } else {
