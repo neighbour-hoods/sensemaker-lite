@@ -1,7 +1,7 @@
-import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
+import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, Timestamp } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { of, map, filter, shareReplay, scan, mergeScan, Subject, Observable, takeUntil } from 'rxjs';
+import { of, filter, shareReplay, scan, mergeScan, groupBy, takeUntil, withLatestFrom, Subject, Observable, GroupedObservable } from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -50,19 +50,42 @@ export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentOb
     })
   )) as AssessmentObservable
 }
+
+export const groupDimensionsOf = (assessments: AssessmentObservable) => {
+  return assessments.pipe(concatMap((as) => from(as)))
+    .pipe(groupBy(a => encodeHashToBase64(a.dimension_eh)))
+}
 */
 
-export const latestOf = (assessments: AssessmentObservable): AssessmentObservable =>
+export function latestOf<T>(returnNewest: (latest: T | null, a: T) => T) {
+  return function (things: Observable<T> & Writable<T> & Subject<T>) {
+    return things.pipe(
+      mergeScan((latest: T | null, a: T, i: number) => {
+        return of(returnNewest(latest, a))
+      }, null),
+    ) as Observable<T> & Writable<T> & Subject<T>
+  }
+}
+
+function getNewerAssessment(latest: Assessment | null, a: Assessment): Assessment {
+  return (!latest || latest.timestamp <= a.timestamp) ? a : latest
+}
+
+export const mostRecentAssessment: (as: AssessmentObservable) => AssessmentObservable = latestOf<Assessment>(getNewerAssessment)
+
+export const forResource = (resourceEh: string) => (assessments: AssessmentObservable) =>
   assessments.pipe(
-    mergeScan((latest: Assessment | null, a: Assessment, i: number) => {
-      if (!latest || latest.timestamp <= a.timestamp) return of(a)
-      return of(latest)
-    }, null),
+    filter(a => resourceEh === encodeHashToBase64(a.resource_eh)),
   ) as AssessmentObservable
 
-export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable): AssessmentObservable =>
+export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable) =>
   assessments.pipe(
     filter(a => resourceEh === encodeHashToBase64(a.resource_eh) && dimensionEh === encodeHashToBase64(a.dimension_eh)),
+  ) as AssessmentObservable
+
+export const forResourceDimensions = (resourceEh: string, dimensionEhs: string[]) => (assessments: AssessmentObservable) =>
+  assessments.pipe(
+    filter(a => resourceEh === encodeHashToBase64(a.resource_eh) && -1 !== dimensionEhs.indexOf(encodeHashToBase64(a.dimension_eh))),
   ) as AssessmentObservable
 
 // Store structure and zome API service bindings
@@ -137,9 +160,13 @@ export class SensemakerStore {
   /// Accessor method to observe all known `Assessments` for the given `resourceEh`
   ///
   assessmentsForResource(resourceEh: EntryHashB64): AssessmentSetObservable {
-    return asSet(this._resourceAssessments.pipe(
-      filter(a => resourceEh === encodeHashToBase64(a.resource_eh)),
-    ) as AssessmentObservable)
+    return asSet(forResource(resourceEh)(this._resourceAssessments))
+  }
+
+  /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`s
+  ///
+  assessmentsForResourceDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentSetObservable {
+    return asSet(forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments))
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`
@@ -151,7 +178,21 @@ export class SensemakerStore {
   /// Accessor method to observe the *latest* `Assessment` for a given `resourceEh`, ranked within `dimensionEh`
   ///
   latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
-    return latestOf(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
+    return mostRecentAssessment(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
+  }
+
+  /// Accessor method to observe the *latest* `Assessment`s for a given `resourceEh`, ranked within all specified `dimensionEh`s
+  ///
+  latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentSetObservable {
+    const dimensionsOfInterest = forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments)
+    return rxWritable(undefined).pipe(
+      withLatestFrom(dimensionsOfInterest.pipe(
+        groupBy(d => encodeHashToBase64(d.dimension_eh)),
+      )),
+      mergeScan((latest: Assessment | null, a: Assessment, i: number) => {
+        return of(getNewerAssessment(latest, a)) as AssessmentObservable
+      }, null),
+    )
   }
 
   appletConfig() {
