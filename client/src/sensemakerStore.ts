@@ -1,4 +1,4 @@
-import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, Timestamp } from '@holochain/client';
+import { AgentPubKey, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
 import {
@@ -9,9 +9,9 @@ import {
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
-import { SensemakerService, ResourceAssessmentsResponse } from './sensemakerService';
+import { SensemakerService, deserializeAssessment } from './sensemakerService';
 import { AppletConfig, AppletConfigInput, AppletUIConfig, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, DimensionEh, GetAssessmentsForResourceInput, Method, ResourceDef, ResourceDefEh, ResourceEh, RunMethodInput } from './index';
-import { Option } from './utils';
+import type { Option } from './utils';
 
 // zome API output types
 
@@ -43,27 +43,27 @@ export type ResourceAssessmentsObservable = StoreObservable<IndexedAssessments>
 
 // `Assessment` stream filtering helpers
 
-const resourceID = (a: Assessment) => encodeHashToBase64(a.resource_eh),
-  dimensionID = (a: Assessment) => encodeHashToBase64(a.dimension_eh),
-  isResource = (resourceEh: string) => (a: Assessment) => resourceID(a) === resourceEh,
-  isDimension = (dimensionEh: string) => (a: Assessment) => dimensionID(a) === dimensionEh,
-  isResAndDim = (resourceEh: string, dimensionEh: string) => (a: Assessment) => dimensionEh === dimensionID(a) && resourceEh === resourceID(a),
-  isResAndDims = (resourceEh: string, dimensionEhs: string[]) => (a: Assessment) => resourceEh === resourceID(a) && -1 !== dimensionEhs.indexOf(dimensionID(a)),
-  isDimAndResources = (dimensionEh: string, resourceEhs: string[]) => (a: Assessment) => dimensionEh === dimensionID(a) && -1 !== resourceEhs.indexOf(resourceID(a))
+const resourceID = (a: Assessment) => a.resource_eh,
+  dimensionID = (a: Assessment) => a.dimension_eh,
+  isResource = (resourceEh: ResourceEh) => (a: Assessment) => resourceID(a) === resourceEh,
+  isDimension = (dimensionEh: DimensionEh) => (a: Assessment) => dimensionID(a) === dimensionEh,
+  isResAndDim = (resourceEh: ResourceEh, dimensionEh: DimensionEh) => (a: Assessment) => dimensionEh === dimensionID(a) && resourceEh === resourceID(a),
+  isResAndDims = (resourceEh: ResourceEh, dimensionEhs: DimensionEh[]) => (a: Assessment) => resourceEh === resourceID(a) && -1 !== dimensionEhs.indexOf(dimensionID(a)),
+  isDimAndResources = (dimensionEh: DimensionEh, resourceEhs: ResourceEh[]) => (a: Assessment) => dimensionEh === dimensionID(a) && -1 !== resourceEhs.indexOf(resourceID(a))
 
-export const forResource = (resourceEh: string) => (assessments: AssessmentObservable) =>
+export const forResource = (resourceEh: ResourceEh) => (assessments: AssessmentObservable) =>
   assessments.pipe(filter(isResource(resourceEh))) as AssessmentObservable
 
-export const forDimension = (dimensionEh: string) => (assessments: AssessmentObservable) =>
+export const forDimension = (dimensionEh: DimensionEh) => (assessments: AssessmentObservable) =>
   assessments.pipe(filter(isDimension(dimensionEh))) as AssessmentObservable
 
-export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable) =>
+export const forResourceDimension = (resourceEh: ResourceEh, dimensionEh: DimensionEh) => (assessments: AssessmentObservable) =>
   assessments.pipe(filter(isResAndDim(resourceEh, dimensionEh))) as AssessmentObservable
 
-export const forResourceDimensions = (resourceEh: string, dimensionEhs: string[]) => (assessments: AssessmentObservable) =>
+export const forResourceDimensions = (resourceEh: ResourceEh, dimensionEhs: DimensionEh[]) => (assessments: AssessmentObservable) =>
   assessments.pipe(filter(isResAndDims(resourceEh, dimensionEhs))) as AssessmentObservable
 
-export const forDimensionResources = (dimensionEh: string, resourceEhs: string[]) => (assessments: AssessmentObservable) =>
+export const forDimensionResources = (dimensionEh: DimensionEh, resourceEhs: ResourceEh[]) => (assessments: AssessmentObservable) =>
   assessments.pipe(filter(isDimAndResources(dimensionEh, resourceEhs))) as AssessmentObservable
 
 /// Generic stream helper to continually return "latest" emitted value(s) as determined by a custom comparator function.
@@ -189,31 +189,31 @@ export class SensemakerStore {
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh`
   ///
-  assessmentsForResource(resourceEh: EntryHashB64): AssessmentSetObservable {
+  assessmentsForResource(resourceEh: ResourceEh): AssessmentSetObservable {
     return asSet(forResource(resourceEh)(this._resourceAssessments))
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`s
   ///
-  assessmentsForResourceDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentSetObservable {
+  assessmentsForResourceDimensions(resourceEh: ResourceEh, dimensionEhs: DimensionEh[]): AssessmentSetObservable {
     return asSet(forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments))
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh` along the given `dimensionEh`
   ///
-  assessmentsForResourceDimension(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentSetObservable {
+  assessmentsForResourceDimension(resourceEh: ResourceEh, dimensionEh: DimensionEh): AssessmentSetObservable {
     return asSet(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
   }
 
   /// Accessor method to observe the *latest* `Assessment` for a given `resourceEh`, ranked within `dimensionEh`
   ///
-  latestAssessmentOf(resourceEh: EntryHashB64, dimensionEh: EntryHashB64): AssessmentObservable {
+  latestAssessmentOf(resourceEh: ResourceEh, dimensionEh: DimensionEh): AssessmentObservable {
     return mostRecentAssessment(forResourceDimension(resourceEh, dimensionEh)(this._resourceAssessments))
   }
 
   /// Accessor method to observe the *latest* `Assessment`s for a given `resourceEh`, ranked within all specified `dimensionEh`s
   ///
-  latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentDimensionsObservable {
+  latestAssessmentsOfDimensions(resourceEh: ResourceEh, dimensionEhs: DimensionEh[]): AssessmentDimensionsObservable {
     return mergeGroup<EntryHashB64, Assessment>(newestGroupedAssessments, {})(
       forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(groupBy(dimensionID))
     )
@@ -221,19 +221,19 @@ export class SensemakerStore {
 
   /// Accessor method to observe all known `Assessment`s for a given `dimensionEh`
   ///
-  assessmentsForDimension(dimensionEh: EntryHashB64): AssessmentSetObservable {
+  assessmentsForDimension(dimensionEh: DimensionEh): AssessmentSetObservable {
     return asSet(forDimension(dimensionEh)(this._resourceAssessments))
   }
 
   /// Accessor method to observe all known `Assessment`s ranked within the given `dimensionEh` for any provided `resourceEh`s
   ///
-  assessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): AssessmentSetObservable {
+  assessmentsForResourcesInDimension(dimensionEh: DimensionEh, resourceEhs: ResourceEh[]): AssessmentSetObservable {
     return asSet(forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments))
   }
 
   /// Accessor method to observe the *latest* `Assessment`s ranked within the given `dimensionEh` for any provided `resourceEh`s
   ///
-  latestAssessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): ResourceAssessmentsObservable {
+  latestAssessmentsForResourcesInDimension(dimensionEh: DimensionEh, resourceEhs: ResourceEh[]): ResourceAssessmentsObservable {
     return mergeGroup<EntryHashB64, Assessment>(newestGroupedAssessments, {})(
       forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments).pipe(groupBy(resourceID))
     )
@@ -276,7 +276,7 @@ export class SensemakerStore {
     // NOTE: there is currently a slight discrepancy between the assessment returned from the service and the one stored in the store
     // because we are not returning the assessment, and so recreating the timestamp. This works enough for now, but would be worth it to change
     // it to use optimistic updates such that a draft assessment can be propagated earlier and updated upon completion of the `createAssessment` API call.
-    this.syncNewAssessments([{ ...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000 }])
+    this.syncNewAssessments([deserializeAssessment({ ...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000 })])
 
     return assessmentEh
   }

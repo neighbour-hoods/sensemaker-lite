@@ -1,8 +1,18 @@
-import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
-import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
-import { Option } from './utils';
+import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName, encodeHashToBase64 } from '@holochain/client';
+import { AppletConfig, AppletConfigInput, Assessment, RawAssessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
+import type { Option } from './utils';
 
-export type ResourceAssessmentsResponse = Record<EntryHashB64, Assessment[]>
+export type ResourceAssessmentsResponse = Record<EntryHashB64, RawAssessment[]>
+
+export function deserializeAssessment(a: RawAssessment): Assessment {
+  return {
+    ...a,
+    author: encodeHashToBase64(a.author),
+    dimension_eh: encodeHashToBase64(a.dimension_eh),
+    resource_eh: encodeHashToBase64(a.resource_eh),
+    resource_def_eh: encodeHashToBase64(a.resource_def_eh),
+  }
+}
 
 export class SensemakerService {
   constructor(public client: AppAgentClient, public roleName: RoleName, public zomeName = 'sensemaker') {}
@@ -35,7 +45,7 @@ export class SensemakerService {
   async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Assessment[]> {
     const assessments: ResourceAssessmentsResponse = await this.callZome('get_assessments_for_resources', getAssessmentsInput);
 
-    return Object.keys(assessments).flatMap(resourceEh => assessments[resourceEh])
+    return Object.keys(assessments).flatMap(resourceEh => assessments[resourceEh].map(deserializeAssessment))
   }
 
   async createMethod(method: Method): Promise<EntryHash> {

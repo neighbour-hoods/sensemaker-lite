@@ -1,4 +1,4 @@
-import { AppEntryDef, EntryHash } from "@holochain/client";
+import { AppEntryDef, EntryHashB64 } from "@holochain/client";
 import { ConfigDimension, Dimension } from "./dimension";
 
 interface CoreResourceDef {
@@ -6,13 +6,13 @@ interface CoreResourceDef {
     base_types: Array<AppEntryDef>,
 }
 export type ResourceDef = CoreResourceDef & {
-    dimension_ehs: Array<EntryHash>,
+  dimension_ehs: Array<EntryHashB64>,
 }
 
 export type ConfigResourceDef = CoreResourceDef & {
-    dimensions: Array<ConfigDimension>,
+  dimensions: Array<ConfigDimension>,
 }
 
-export type ResourceDefEh = EntryHash
+export type ResourceDefEh = EntryHashB64
 
-export type ResourceEh = EntryHash
+export type ResourceEh = EntryHashB64
