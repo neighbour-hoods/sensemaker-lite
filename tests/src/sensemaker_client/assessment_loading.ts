@@ -1,9 +1,5 @@
 import test from "tape-promise/tape"
-import { of, filter, lastValueFrom } from 'rxjs'
-
 import { scheduler, mockAssessmentsStore, mockAssessment, mockEh } from '../store_mocks'
-import { Assessment } from '@neighbourhoods/client'
-import { }from "@holochain/client"
 
 
 
