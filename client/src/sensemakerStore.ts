@@ -222,10 +222,14 @@ export class SensemakerStore {
     return asSet(forDimension(dimensionEh)(this._resourceAssessments))
   }
 
+  /// Accessor method to observe all known `Assessment`s ranked within the given `dimensionEh` for any provided `resourceEh`s
+  ///
   assessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): AssessmentSetObservable {
     return asSet(forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments))
   }
 
+  /// Accessor method to observe the *latest* `Assessment`s ranked within the given `dimensionEh` for any provided `resourceEh`s
+  ///
   latestAssessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): ResourceAssessmentsObservable {
     return mergeGroup<EntryHashB64, Assessment>((dims: IndexedAssessments, a: IndexedAssessments, i: number) => {
       Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
