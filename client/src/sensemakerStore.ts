@@ -82,6 +82,12 @@ function getNewerAssessment(latest: Assessment | null, a: Assessment): Assessmen
   return (!latest || latest.timestamp < a.timestamp) ? a : latest
 }
 
+/// Helper to merge indexed data from `GroupedObservable` of `Assessments` to output streams
+function newestGroupedAssessments(dims: IndexedAssessments, a: IndexedAssessments, i: number) {
+  Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
+  return of(dims)
+}
+
 /// Batches all `Assessments` from the input stream (or group of streams) and discards all but the one with the most recent timestamp.
 export const mostRecentAssessment: (as: AssessmentObservable) => AssessmentObservable = latestOf<Assessment>(getNewerAssessment)
 
@@ -208,12 +214,9 @@ export class SensemakerStore {
   /// Accessor method to observe the *latest* `Assessment`s for a given `resourceEh`, ranked within all specified `dimensionEh`s
   ///
   latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentDimensionsObservable {
-    return mergeGroup<EntryHashB64, Assessment>((dims: IndexedAssessments, a: IndexedAssessments, i: number) => {
-      Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
-      return of(dims)
-    }, {})(forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(
-      groupBy(dimensionID),
-    ))
+    return mergeGroup<EntryHashB64, Assessment>(newestGroupedAssessments, {})(
+      forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(groupBy(dimensionID))
+    )
   }
 
   /// Accessor method to observe all known `Assessment`s for a given `dimensionEh`
@@ -231,12 +234,9 @@ export class SensemakerStore {
   /// Accessor method to observe the *latest* `Assessment`s ranked within the given `dimensionEh` for any provided `resourceEh`s
   ///
   latestAssessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): ResourceAssessmentsObservable {
-    return mergeGroup<EntryHashB64, Assessment>((dims: IndexedAssessments, a: IndexedAssessments, i: number) => {
-      Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
-      return of(dims)
-    }, {})(forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments).pipe(
-      groupBy(resourceID),
-    ))
+    return mergeGroup<EntryHashB64, Assessment>(newestGroupedAssessments, {})(
+      forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments).pipe(groupBy(resourceID))
+    )
   }
 
   appletConfig() {
