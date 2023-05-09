@@ -206,3 +206,89 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
     } })
   })
 })
+
+
+
+test('it provides convenience methods for accessing Assessment data in the Sensemaker dashboard', async (t) => {
+  const testScheduler = scheduler(t)
+
+  // configure mock data
+
+  const d1 = mockEh(), d2 = mockEh()
+  const r1 = mockEh(), r2 = mockEh()
+  const a1 = mockAssessment({ Integer: 1 }, r1, d1),
+    a3 = mockAssessment({ Integer: 3 }, 0, d1),
+    a5 = mockAssessment({ Integer: 5 }, r1),
+    a6 = mockAssessment({ Integer: 6 }, r1, d1)
+
+  const store = await mockAssessmentsStore({})
+
+  // START TEST LOGIC
+
+  const observing1 = store.assessmentsForDimension(encodeHashToBase64(d1))
+  const observing2 = store.assessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1)])
+
+  store.mockAssessments({
+    'resource_001': [a1, a5, a6],
+    'resource_002': [a3]
+  })
+  await store.loadAssessmentsForResources({})
+
+  // filtering works as expected
+
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing1).toBe('a', { a: new Set([a1, a3, a6]) })
+    expectObservable(observing2).toBe('a', { a: new Set([a1, a6]) })
+  })
+
+  // late subscribers get existing data
+
+  const observing2E = store.assessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1)])
+
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing2E).toBe('a', { a: new Set([a1, a6]) })
+  })
+
+  // more complex set-based accessor; 'latest' filtering operates as expected
+
+  const a7 = mockAssessment({ Integer: 7 }, r2, d1)
+  store.mockAssessments({ 'resource_003': [a7] })
+  await store.loadAssessmentsForResources({})
+
+  const observing5 = store.latestAssessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1), encodeHashToBase64(r2)])
+
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing5).toBe('a', { a: {
+      [encodeHashToBase64(r1)]: a6,
+      [encodeHashToBase64(r2)]: a7,
+    } })
+  })
+
+  // adding information updates the most recently emitted value
+
+  const a8 = mockAssessment({ Integer: 8 }, r1, d1)
+  store.mockAssessments({ 'resource_003': [a8] })
+  await store.loadAssessmentsForResources({})
+
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing5).toBe('a', { a: {
+      [encodeHashToBase64(r1)]: a8,
+      [encodeHashToBase64(r2)]: a7,
+    } })
+  })
+
+  // outdated information does not cause an update
+
+  const a9 = mockAssessment({ Integer: 9 }, r1, d1, Date.now() - 3600000)
+  store.mockAssessments({ 'resource_003': [a9] })
+  await store.loadAssessmentsForResources({})
+
+  testScheduler.run(({ expectObservable }) => {
+    expectObservable(observing5).toBe('a', {
+      a: {
+        [encodeHashToBase64(r1)]: a8,
+        [encodeHashToBase64(r2)]: a7,
+      }
+    })
+  })
+})
