@@ -1,7 +1,11 @@
 import { AgentPubKey, decodeHashFromBase64, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, Timestamp } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
-import { of, filter, shareReplay, scan, map, mergeMap, mergeScan, groupBy, takeUntil, withLatestFrom, Subject, Observable, GroupedObservable, tap } from 'rxjs';
+import {
+  of, filter, shareReplay, scan, map, mergeMap, mergeScan, mergeWith, groupBy, takeUntil,
+  Subject, Observable, GroupedObservable, ObservableInput,
+  tap,
+} from 'rxjs';
 import { produce } from 'immer';
 import { createContext } from '@lit-labs/context';
 
@@ -24,7 +28,7 @@ export interface assessmentsFilterOpts {
   dimensionEhs?: string[]
 }
 
-// TypeScript interface
+// external API interface for `Assessment` observables
 
 export type StoreObservable<T> = Writable<T> & Subject<T> & Observable<T>
 
@@ -32,35 +36,37 @@ export type AssessmentObservable = StoreObservable<Assessment>
 
 export type AssessmentSetObservable = StoreObservable<Set<Assessment>>
 
-export type AssessmentDimensionsObservable = StoreObservable<Record<EntryHashB64, Assessment>>
+export type IndexedAssessments = Record<EntryHashB64, Assessment>
+
+export type AssessmentDimensionsObservable = StoreObservable<IndexedAssessments>
+export type ResourceAssessmentsObservable = StoreObservable<IndexedAssessments>
 
 // `Assessment` stream filtering helpers
 
-export const asSet = (as: AssessmentObservable) =>
-  as.pipe(
-    scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
-    shareReplay(1),
-  ) as AssessmentSetObservable
+const resourceID = (a: Assessment) => encodeHashToBase64(a.resource_eh),
+  dimensionID = (a: Assessment) => encodeHashToBase64(a.dimension_eh),
+  isResource = (resourceEh: string) => (a: Assessment) => resourceID(a) === resourceEh,
+  isDimension = (dimensionEh: string) => (a: Assessment) => dimensionID(a) === dimensionEh,
+  isResAndDim = (resourceEh: string, dimensionEh: string) => (a: Assessment) => dimensionEh === dimensionID(a) && resourceEh === resourceID(a),
+  isResAndDims = (resourceEh: string, dimensionEhs: string[]) => (a: Assessment) => resourceEh === resourceID(a) && -1 !== dimensionEhs.indexOf(dimensionID(a)),
+  isDimAndResources = (dimensionEh: string, resourceEhs: string[]) => (a: Assessment) => dimensionEh === dimensionID(a) && -1 !== resourceEhs.indexOf(resourceID(a))
 
-/*
-export const dimensionOf = (dimensionEh: EntryHashB64, assessments: AssessmentObservable): AssessmentObservable => {
-  return assessments.pipe(map((as: Set<Assessment>) =>
-    produce(as, draft => {
-      as.forEach(a => {
-        if (encodeHashToBase64(a.dimension_eh) !== dimensionEh) {
-          draft.delete(a)
-        }
-      })
-    })
-  )) as AssessmentObservable
-}
+export const forResource = (resourceEh: string) => (assessments: AssessmentObservable) =>
+  assessments.pipe(filter(isResource(resourceEh))) as AssessmentObservable
 
-export const groupDimensionsOf = (assessments: AssessmentObservable) => {
-  return assessments.pipe(concatMap((as) => from(as)))
-    .pipe(groupBy(a => encodeHashToBase64(a.dimension_eh)))
-}
-*/
+export const forDimension = (dimensionEh: string) => (assessments: AssessmentObservable) =>
+  assessments.pipe(filter(isDimension(dimensionEh))) as AssessmentObservable
 
+export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable) =>
+  assessments.pipe(filter(isResAndDim(resourceEh, dimensionEh))) as AssessmentObservable
+
+export const forResourceDimensions = (resourceEh: string, dimensionEhs: string[]) => (assessments: AssessmentObservable) =>
+  assessments.pipe(filter(isResAndDims(resourceEh, dimensionEhs))) as AssessmentObservable
+
+export const forDimensionResources = (dimensionEh: string, resourceEhs: string[]) => (assessments: AssessmentObservable) =>
+  assessments.pipe(filter(isDimAndResources(dimensionEh, resourceEhs))) as AssessmentObservable
+
+/// Generic stream helper to continually return "latest" emitted value(s) as determined by a custom comparator function.
 export function latestOf<T>(returnNewest: (latest: T | null, a: T) => T) {
   return function (things: Observable<T> & Writable<T> & Subject<T>) {
     return things.pipe(
@@ -71,26 +77,40 @@ export function latestOf<T>(returnNewest: (latest: T | null, a: T) => T) {
   }
 }
 
+/// Helper to fallthrough the most recent `Assessment` from a pair.
 function getNewerAssessment(latest: Assessment | null, a: Assessment): Assessment {
   return (!latest || latest.timestamp < a.timestamp) ? a : latest
 }
 
+/// Batches all `Assessments` from the input stream (or group of streams) and discards all but the one with the most recent timestamp.
 export const mostRecentAssessment: (as: AssessmentObservable) => AssessmentObservable = latestOf<Assessment>(getNewerAssessment)
 
-export const forResource = (resourceEh: string) => (assessments: AssessmentObservable) =>
-  assessments.pipe(
-    filter(a => resourceEh === encodeHashToBase64(a.resource_eh)),
-  ) as AssessmentObservable
+// `map`ping helper to unpack `GroupedObservables` into keyed `Record` structs
+function unpackRecord<S, T>(g: GroupedObservable<S, T>) {
+  return function unpacker(a: T) {
+    return { [g.key as any]: a } as Record<any, T>
+  }
+}
 
-export const forResourceDimension = (resourceEh: string, dimensionEh: string) => (assessments: AssessmentObservable) =>
-  assessments.pipe(
-    filter(a => resourceEh === encodeHashToBase64(a.resource_eh) && dimensionEh === encodeHashToBase64(a.dimension_eh)),
-  ) as AssessmentObservable
+/// Flatten a `GroupedObservable` output from a `groupBy` operation into a `Record` collected from all streams in the group.
+/// The returned `Record` is indexed by whatever `key` the group was first separated by.
+export function mergeGroup<S, T>(reducer: (dims: Record<any, T>, a: Record<any, T>, i: number) => ObservableInput<Record<any, T>>, init: Record<any, T>) {
+  return function(group: Observable<GroupedObservable<S, T>>) {
+    return rxWritable(undefined).pipe(
+      mergeWith(group),
+      mergeMap((g: GroupedObservable<S, T>) => g.pipe(map(unpackRecord<S, T>(g)))),
+      mergeScan(reducer, init),
+      shareReplay(1),
+    )
+  }
+}
 
-export const forResourceDimensions = (resourceEh: string, dimensionEhs: string[]) => (assessments: AssessmentObservable) =>
-  assessments.pipe(
-    filter(a => resourceEh === encodeHashToBase64(a.resource_eh) && -1 !== dimensionEhs.indexOf(encodeHashToBase64(a.dimension_eh))),
-  ) as AssessmentObservable
+/// Collect all `Assessments` emitted by the input stream into a persistently cached `Set`, and emit only the most recently updated collection.
+export const asSet = (as: AssessmentObservable) =>
+  as.pipe(
+    scan((set, a) => produce(set, draft => draft.add(a)), new Set<Assessment>()),
+    shareReplay(1),
+  ) as AssessmentSetObservable
 
 // Store structure and zome API service bindings
 
@@ -148,13 +168,13 @@ export class SensemakerStore {
     if (opts.resourceEhs) {
       const matches = opts.resourceEhs
       result = result.pipe(
-        filter(a => matches.indexOf(encodeHashToBase64(a.resource_eh)) !== -1),
+        filter(a => matches.indexOf(resourceID(a)) !== -1),
       ) as AssessmentObservable
     }
     if (opts.dimensionEhs) {
       const matches = opts.dimensionEhs
       result = result.pipe(
-        filter(a => matches.indexOf(encodeHashToBase64(a.dimension_eh)) !== -1),
+        filter(a => matches.indexOf(dimensionID(a)) !== -1),
       ) as AssessmentObservable
     }
 
@@ -188,17 +208,31 @@ export class SensemakerStore {
   /// Accessor method to observe the *latest* `Assessment`s for a given `resourceEh`, ranked within all specified `dimensionEh`s
   ///
   latestAssessmentsOfDimensions(resourceEh: EntryHashB64, dimensionEhs: EntryHashB64[]): AssessmentDimensionsObservable {
-    return forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(
-      groupBy((d: Assessment) => encodeHashToBase64(d.dimension_eh)),
-      mergeMap((group: GroupedObservable<EntryHashB64, Assessment>) => group.pipe(
-        map(g => ({ [group.key]: g }))
-      )),
-      mergeScan((dims: Record<EntryHashB64, Assessment>, a: Record<EntryHashB64, Assessment>, i: number) => {
-        Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
-        return of(dims)
-      }, {}),
-      shareReplay(1),
-    ) as AssessmentDimensionsObservable
+    return mergeGroup<EntryHashB64, Assessment>((dims: IndexedAssessments, a: IndexedAssessments, i: number) => {
+      Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
+      return of(dims)
+    }, {})(forResourceDimensions(resourceEh, dimensionEhs)(this._resourceAssessments).pipe(
+      groupBy(dimensionID),
+    ))
+  }
+
+  /// Accessor method to observe all known `Assessment`s for a given `dimensionEh`
+  ///
+  assessmentsForDimension(dimensionEh: EntryHashB64): AssessmentSetObservable {
+    return asSet(forDimension(dimensionEh)(this._resourceAssessments))
+  }
+
+  assessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): AssessmentSetObservable {
+    return asSet(forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments))
+  }
+
+  latestAssessmentsForResourcesInDimension(dimensionEh: EntryHashB64, resourceEhs: EntryHashB64[]): ResourceAssessmentsObservable {
+    return mergeGroup<EntryHashB64, Assessment>((dims: IndexedAssessments, a: IndexedAssessments, i: number) => {
+      Object.keys(a).forEach(dH => dims[dH] = getNewerAssessment(dims[dH], a[dH]))
+      return of(dims)
+    }, {})(forDimensionResources(dimensionEh, resourceEhs)(this._resourceAssessments).pipe(
+      groupBy(resourceID),
+    ))
   }
 
   appletConfig() {
