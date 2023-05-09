@@ -2,14 +2,13 @@
 import { randomBytes } from 'crypto'
 import { TestScheduler } from 'rxjs/testing'
 import equal from 'fast-deep-equal/es6'
-import type { Timestamp } from '@holochain/client'
+import { Timestamp, encodeHashToBase64, EntryHashB64 } from '@holochain/client'
 
 import {
   SensemakerStore, SensemakerService,
-  Assessment, AssessmentObservable,
-  GetAssessmentsForResourceInput, ResourceAssessmentsResponse,
+  Assessment,
+  GetAssessmentsForResourceInput,
   RangeValue,
-  ResourceAssessmentResults,
 } from '@neighbourhoods/client'
 
 const flattenFrames = (emitted) => emitted.reduce((fs, f) => {
@@ -75,12 +74,14 @@ const mockHash = (prefix) => {
   return result
 }
 
-export const mockEh = () => mockHash(HOLOHASH_PREFIX_ENTRY)
-export const mockAgentKey = () => mockHash(HOLOHASH_PREFIX_AGENT)
+const mockEhRaw = () => mockHash(HOLOHASH_PREFIX_ENTRY)
+const mockAhRaw = () => mockHash(HOLOHASH_PREFIX_AGENT)
+export const mockEh = () => encodeHashToBase64(mockEhRaw())
+export const mockAgentKey = () => encodeHashToBase64(mockAhRaw())
 
 let timeOff = 0
 
-export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint8Array | 0, time: null | Timestamp = null) => ({
+export const mockAssessment = (val: RangeValue, rEh?: string | 0, dEh?: string | 0, time: null | Timestamp = null): Assessment => ({
   resource_eh: rEh || mockEh(),
   dimension_eh: dEh || mockEh(),
   resource_def_eh: mockEh(),
@@ -90,14 +91,16 @@ export const mockAssessment = (val: RangeValue, rEh?: Uint8Array | 0, dEh?: Uint
   timestamp: time || (Date.now() + (++timeOff * 1000)),
 })
 
+type MockedResponse = Record<EntryHashB64, Assessment[]>
+
 interface MockableStore extends SensemakerStore {
-  mockAssessments: (withAssessments: ResourceAssessmentsResponse) => void
+  mockAssessments: (withAssessments: MockedResponse) => void
 }
 interface MockedService extends SensemakerService {
   _assessments: Assessment[]
 }
 
-export async function mockAssessmentsStore(withAssessments: ResourceAssessmentsResponse) {
+export async function mockAssessmentsStore(withAssessments: MockedResponse) {
   const pubKey = mockAgentKey()
   const serviceMock = {
     _assessments: withAssessments,

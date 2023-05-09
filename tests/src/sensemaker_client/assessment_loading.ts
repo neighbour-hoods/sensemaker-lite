@@ -3,7 +3,7 @@ import { of, filter, lastValueFrom } from 'rxjs'
 
 import { scheduler, mockAssessmentsStore, mockAssessment, mockEh } from '../store_mocks'
 import { Assessment } from '@neighbourhoods/client'
-import { encodeHashToBase64 } from "@holochain/client"
+import { }from "@holochain/client"
 
 
 
@@ -83,10 +83,10 @@ test('it emits a filtered stream of resourceAssessments based on matching resour
 
   // START TEST LOGIC
 
-  const observing1 = store.resourceAssessments({ dimensionEhs: [encodeHashToBase64(d1)] })
-  const observing2 = store.resourceAssessments({ dimensionEhs: [encodeHashToBase64(d1), encodeHashToBase64(d2)] })
-  const observingR1 = store.resourceAssessments({ resourceEhs: [encodeHashToBase64(r1)] })
-  const observingR1D1 = store.resourceAssessments({ resourceEhs: [encodeHashToBase64(r1)], dimensionEhs: [encodeHashToBase64(d1)] })
+  const observing1 = store.resourceAssessments({ dimensionEhs: [d1] })
+  const observing2 = store.resourceAssessments({ dimensionEhs: [d1, d2] })
+  const observingR1 = store.resourceAssessments({ resourceEhs: [r1] })
+  const observingR1D1 = store.resourceAssessments({ resourceEhs: [r1], dimensionEhs: [d1] })
 
   await store.loadAssessmentsForResources({})
 
@@ -101,8 +101,8 @@ test('it emits a filtered stream of resourceAssessments based on matching resour
 
   // late subscribers get existing data
 
-  const observing3 = store.resourceAssessments({ dimensionEhs: [encodeHashToBase64(d1)] })
-  const observing4 = store.resourceAssessments({ dimensionEhs: [encodeHashToBase64(d1), encodeHashToBase64(d2)] })
+  const observing3 = store.resourceAssessments({ dimensionEhs: [d1] })
+  const observing4 = store.resourceAssessments({ dimensionEhs: [d1, d2] })
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing3).toBe('a', { a: new Set([a1, a3]) })
@@ -130,10 +130,10 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // START TEST LOGIC
 
-  const observing1 = store.assessmentsForResource(encodeHashToBase64(r1))
-  const observing4 = store.assessmentsForResourceDimension(encodeHashToBase64(r1), encodeHashToBase64(d2))
-  const observing2 = store.assessmentsForResourceDimensions(encodeHashToBase64(r1), [encodeHashToBase64(d1)])
-  const observing3 = store.assessmentsForResourceDimensions(encodeHashToBase64(r1), [encodeHashToBase64(d1), encodeHashToBase64(d2)])
+  const observing1 = store.assessmentsForResource(r1)
+  const observing4 = store.assessmentsForResourceDimension(r1, d2)
+  const observing2 = store.assessmentsForResourceDimensions(r1, [d1])
+  const observing3 = store.assessmentsForResourceDimensions(r1, [d1, d2])
 
   store.mockAssessments({
     'resource_001': [a1, a5],
@@ -152,7 +152,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // late subscribers get existing data
 
-  const observing1E = store.assessmentsForResource(encodeHashToBase64(r1))
+  const observing1E = store.assessmentsForResource(r1)
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing1E).toBe('a', { a: new Set([a1, a5, a6]) })
@@ -164,7 +164,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
   store.mockAssessments({ 'resource_003': [a7] })
   await store.loadAssessmentsForResources({})
 
-  const observing5 = store.latestAssessmentOf(encodeHashToBase64(r1), encodeHashToBase64(d2))
+  const observing5 = store.latestAssessmentOf(r1, d2)
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing5).toBe('a', { a: a7 })
@@ -176,7 +176,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
   store.mockAssessments({ 'resource_003': [a8] })
   await store.loadAssessmentsForResources({})
 
-  const observing6 = store.latestAssessmentOf(encodeHashToBase64(r1), encodeHashToBase64(d2))
+  const observing6 = store.latestAssessmentOf(r1, d2)
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing5).toBe('a', { a: a8 })
@@ -189,7 +189,7 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
   store.mockAssessments({ 'resource_003': [a9] })
   await store.loadAssessmentsForResources({})
 
-  const observing7 = store.latestAssessmentOf(encodeHashToBase64(r1), encodeHashToBase64(d2))
+  const observing7 = store.latestAssessmentOf(r1, d2)
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing7).toBe('a', { a: a8 })
@@ -197,12 +197,12 @@ test('it provides convenience methods for accessing Assessment data in Applet wi
 
   // more complex set-based accessor
 
-  const observing8 = store.latestAssessmentsOfDimensions(encodeHashToBase64(r1), [encodeHashToBase64(d2), encodeHashToBase64(d1)])
+  const observing8 = store.latestAssessmentsOfDimensions(r1, [d2, d1])
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing8).toBe('a', { a: {
-      [encodeHashToBase64(d1)]: a1,
-      [encodeHashToBase64(d2)]: a8,
+      [d1]: a1,
+      [d2]: a8,
     } })
   })
 })
@@ -225,8 +225,8 @@ test('it provides convenience methods for accessing Assessment data in the Sense
 
   // START TEST LOGIC
 
-  const observing1 = store.assessmentsForDimension(encodeHashToBase64(d1))
-  const observing2 = store.assessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1)])
+  const observing1 = store.assessmentsForDimension(d1)
+  const observing2 = store.assessmentsForResourcesInDimension(d1, [r1])
 
   store.mockAssessments({
     'resource_001': [a1, a5, a6],
@@ -243,7 +243,7 @@ test('it provides convenience methods for accessing Assessment data in the Sense
 
   // late subscribers get existing data
 
-  const observing2E = store.assessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1)])
+  const observing2E = store.assessmentsForResourcesInDimension(d1, [r1])
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing2E).toBe('a', { a: new Set([a1, a6]) })
@@ -255,12 +255,12 @@ test('it provides convenience methods for accessing Assessment data in the Sense
   store.mockAssessments({ 'resource_003': [a7] })
   await store.loadAssessmentsForResources({})
 
-  const observing5 = store.latestAssessmentsForResourcesInDimension(encodeHashToBase64(d1), [encodeHashToBase64(r1), encodeHashToBase64(r2)])
+  const observing5 = store.latestAssessmentsForResourcesInDimension(d1, [r1, r2])
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing5).toBe('a', { a: {
-      [encodeHashToBase64(r1)]: a6,
-      [encodeHashToBase64(r2)]: a7,
+      [r1]: a6,
+      [r2]: a7,
     } })
   })
 
@@ -272,8 +272,8 @@ test('it provides convenience methods for accessing Assessment data in the Sense
 
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing5).toBe('a', { a: {
-      [encodeHashToBase64(r1)]: a8,
-      [encodeHashToBase64(r2)]: a7,
+      [r1]: a8,
+      [r2]: a7,
     } })
   })
 
@@ -286,8 +286,8 @@ test('it provides convenience methods for accessing Assessment data in the Sense
   testScheduler.run(({ expectObservable }) => {
     expectObservable(observing5).toBe('a', {
       a: {
-        [encodeHashToBase64(r1)]: a8,
-        [encodeHashToBase64(r2)]: a7,
+        [r1]: a8,
+        [r2]: a7,
       }
     })
   })
