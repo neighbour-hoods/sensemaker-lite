@@ -1,4 +1,4 @@
-import { AgentPubKey, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
+import { AgentPubKey, AppAgentClient, AppSignal, RoleName, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
 import {
@@ -7,6 +7,7 @@ import {
   tap,
 } from 'rxjs';
 import { produce } from 'immer';
+import type { SignalPayload } from './signal';
 import { createContext } from '@lit-labs/context';
 
 import { SensemakerService, deserializeAssessment } from './sensemakerService';
@@ -151,13 +152,34 @@ export class SensemakerStore {
 
   /** Static info */
   public myAgentPubKey: AgentPubKey;
+  protected service: SensemakerService;
 
   constructor(
-    protected service: SensemakerService,
+    public client: AppAgentClient,
+    public roleName: RoleName,
+    public zomeName = 'sensemaker',
   ) {
-    this._allResourceAssessments = asSet(this._resourceAssessments)
+    client.on("signal", (signal: AppSignal) => {
+      console.log("received signal in sensemaker store: ", signal)
+      const payload = (signal.payload as SignalPayload);
 
-    this.myAgentPubKey = service.myPubKey();
+      switch (payload.type) {
+        case "NewAssessment":
+          const assessment = payload.assessment;
+          this._resourceAssessments.update(resourceAssessments => {
+            const maybePrevAssessments = resourceAssessments[assessment.resource_eh];
+            const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
+            resourceAssessments[assessment.resource_eh] = [...prevAssessments, assessment]
+            return resourceAssessments;
+          })
+          break;
+      }
+    });
+
+    this.service = new SensemakerService(client, roleName)
+    this.myAgentPubKey = this.service.myPubKey()
+
+    this._allResourceAssessments = asSet(this._resourceAssessments)
   }
 
   /**
@@ -251,6 +273,9 @@ export class SensemakerStore {
     return derived(this._appletUIConfig, appletUIConfig => appletUIConfig)
   }
 
+  async getAllAgents() {
+    return await this.service.getAllAgents();
+  }
   async createDimension(dimension: Dimension): Promise<EntryHash> {
     const dimensionEh = await this.service.createDimension(dimension);
     this._appletConfig.update(appletConfig => {

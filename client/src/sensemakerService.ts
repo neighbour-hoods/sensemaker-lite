@@ -17,14 +17,17 @@ export function deserializeAssessment(a: RawAssessment): Assessment {
 export class SensemakerService {
   constructor(public client: AppAgentClient, public roleName: RoleName, public zomeName = 'sensemaker') {}
 
-    /**
+  /**
    * Get my agentkey, if it has been created
    * @returns my AgentPubKey
    */
-    myPubKey(): AgentPubKey {
-      return this.client.myPubKey
-    }
+  myPubKey(): AgentPubKey {
+    return this.client.myPubKey
+  }
 
+  async getAllAgents(): Promise<AgentPubKey[]> {
+    return this.callZome('get_all_agents', null);
+  }
 
   async createDimension(dimension: Dimension): Promise<EntryHash> {
     return this.callZome('create_dimension', dimension);

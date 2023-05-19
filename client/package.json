@@ -1,6 +1,6 @@
 {
   "name": "@neighbourhoods/client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "exports": {
@@ -16,10 +16,10 @@
   "type": "module",
   "dependencies": {
     "@holochain/client": "0.12.0",
-    "@lit-labs/context": "^0.3.0",
+    "@lit-labs/context": "^0.3.1",
     "immer": "^10.0.1",
     "rxjs": "^7.8.0",
-    "svelte": "^3.58.0",
+    "svelte": "^3.59.0",
     "svelte-fuse-rx": "git://github.com/pospi/svelte-fuse-rx#feature/replay-subject"
   },
   "devDependencies": {
