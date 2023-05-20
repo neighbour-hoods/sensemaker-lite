@@ -32,8 +32,8 @@ importers:
         specifier: 0.12.0
         version: 0.12.0(ws@8.13.0)
       '@lit-labs/context':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.3.1
+        version: 0.3.1
       immer:
         specifier: ^10.0.1
         version: 10.0.1
@@ -41,8 +41,8 @@ importers:
         specifier: ^7.8.0
         version: 7.8.0
       svelte:
-        specifier: ^3.58.0
-        version: 3.58.0
+        specifier: ^3.59.0
+        version: 3.59.0
       svelte-fuse-rx:
         specifier: git://github.com/pospi/svelte-fuse-rx#feature/replay-subject
         version: github.com/pospi/svelte-fuse-rx/c8a5d72bf2133c8c4f1eeb8bd672f4acca4a6be3
@@ -411,8 +411,8 @@ packages:
       - utf-8-validate
     dev: true
 
-  /@lit-labs/context@0.3.0:
-    resolution: {integrity: sha512-6cHfQWgU935I/JVrcFY9mkCZBieX0FhnBJhd+/XzqgFLxqmStmReYDkAMr86lR1twdB6siftTHaH1KJ1o/bJXA==}
+  /@lit-labs/context@0.3.1:
+    resolution: {integrity: sha512-7dWIcEn78pP7INJY6T/V3jaoRehtuDoqMY8fGphviNRwD1rcTk4xKhiV/G5Vc0SIPuW+XcqD6tyICnhS2Phrpg==}
     dependencies:
       '@lit/reactive-element': 1.6.1
       lit: 2.7.3
@@ -1896,8 +1896,8 @@ packages:
     engines: {node: '>= 0.4'}
     dev: true
 
-  /svelte@3.58.0:
-    resolution: {integrity: sha512-brIBNNB76mXFmU/Kerm4wFnkskBbluBDCjx/8TcpYRb298Yh2dztS2kQ6bhtjMcvUhd5ynClfwpz5h2gnzdQ1A==}
+  /svelte@3.59.0:
+    resolution: {integrity: sha512-Di1wVPwdWriw5pSyInMRpr5EZmwrzKxtDKv5aXu8A/WDUi59Y5bIvl42eLef0x1vwz+ZtrjdnT8nXir2bDqR/A==}
     engines: {node: '>= 8'}
     dev: false
 
