@@ -1,12 +1,16 @@
-import { EntryHashB64 } from "@holochain/client"
-import { Range } from "./range"
+import { EntryHash, EntryHashB64 } from "@holochain/client"
+import { Range, RangeEh } from "./range"
 interface CoreDimension {
     name: string,
     computed: boolean,
 }
 
 export type Dimension = CoreDimension & {
-    range_eh: EntryHashB64,
+  range_eh: RangeEh,
+}
+
+export type RawDimension = CoreDimension & {
+  range_eh: EntryHash;
 }
 
 export type ConfigDimension = CoreDimension & {

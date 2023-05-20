@@ -1,6 +1,6 @@
-import { EntryHash } from "@holochain/client"
-import { ConfigDimension, Dimension } from "./dimension"
-import { ConfigResourceDef } from "./resourceDef"
+import { EntryHash, EntryHashB64 } from "@holochain/client"
+import { ConfigDimension, DimensionEh } from "./dimension"
+import { ConfigResourceDef, ResourceDefEh, ResourceEh } from "./resourceDef"
 
 interface CoreMethod {
     name: string,
@@ -8,10 +8,17 @@ interface CoreMethod {
     can_compute_live: boolean,
     requires_validation: boolean,
 }
+
 export type Method = CoreMethod & {
-    target_resource_def_eh: EntryHash,
-    input_dimension_ehs: Array<EntryHash>,
-    output_dimension_eh: EntryHash,
+  target_resource_def_eh: ResourceDefEh,
+  input_dimension_ehs: Array<DimensionEh>,
+  output_dimension_eh: DimensionEh,
+}
+
+export type RawMethod = CoreMethod & {
+  target_resource_def_eh: EntryHash,
+  input_dimension_ehs: Array<EntryHash>,
+  output_dimension_eh: EntryHash,
 }
 
 export type ConfigMethod = CoreMethod & {
@@ -21,13 +28,13 @@ export type ConfigMethod = CoreMethod & {
 }
 
 export interface RunMethodInput {
-    resource_eh: EntryHash,
-    method_eh: EntryHash,
+  resource_eh: ResourceEh,
+  method_eh: MethodEh,
 }
 export interface DataSet {
-    from: EntryHash,
+    from: EntryHashB64, // :TODO: ResourceEh?
     data_points: {
-        [key: string]: Array<EntryHash>, // key cannot be of type Uint8Array, specifying as string for now as we are not currently using `DataSet`
+        [key: string]: Array<EntryHashB64>, // key cannot be of type Uint8Array, specifying as string for now as we are not currently using `DataSet`
     }
 }
 
@@ -40,3 +47,5 @@ export interface ProgramSum {
 export interface ProgramAverage {
     Average: null,
 }
+
+export type MethodEh = EntryHashB64

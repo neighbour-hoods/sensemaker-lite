@@ -12,14 +12,15 @@ interface AssessmentData {
 }
 
 export type CreateAssessmentInput = AssessmentData & {
+  dimension_eh: DimensionEh,
+  resource_eh: ResourceEh,
+  resource_def_eh: ResourceDefEh,
+}
+
+export type RawCreateAssessmentInput = AssessmentData & {
   dimension_eh: EntryHash,
   resource_eh: EntryHash,
   resource_def_eh: EntryHash,
-}
-
-export type RawAssessment = CreateAssessmentInput & {
-  author: AgentPubKey,
-  timestamp: Timestamp,
 }
 
 export type Assessment = AssessmentData & {
@@ -30,9 +31,22 @@ export type Assessment = AssessmentData & {
   timestamp: Timestamp,
 }
 
+export type RawAssessment = AssessmentData & {
+  dimension_eh: EntryHash,
+  resource_eh: EntryHash,
+  resource_def_eh: EntryHash,
+  author: AgentPubKey,
+  timestamp: Timestamp,
+}
+
 export interface GetAssessmentsForResourceInput {
-  resource_ehs?: EntryHashB64[],
-  dimension_ehs?: EntryHashB64[],
+  resource_ehs?: ResourceEh[],
+  dimension_ehs?: DimensionEh[],
+}
+
+export interface RawGetAssessmentsForResourceInput {
+  resource_ehs?: EntryHash[],
+  dimension_ehs?: EntryHash[],
 }
 
 export interface AssessmentWithDimensionAndResource {

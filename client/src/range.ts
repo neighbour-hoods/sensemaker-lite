@@ -1,3 +1,5 @@
+import { EntryHashB64 } from "@holochain/client"
+
 export interface Range {
     name: string,
     kind: RangeKind,
@@ -29,3 +31,5 @@ export interface RangeValueInteger {
 export interface RangeValueFloat {
     Float: number,
 }
+
+export type RangeEh = EntryHashB64

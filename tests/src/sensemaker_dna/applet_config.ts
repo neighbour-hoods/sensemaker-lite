@@ -1,7 +1,7 @@
 type AppEntryDef = import('@holochain/client').AppEntryDef;
 type EntryHash = import('@holochain/client').EntryHash;
 
-import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, Dimension, Method, Range, Threshold } from "@neighbourhoods/client"
+import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, RawDimension as Dimension, Method, Range, Threshold } from "@neighbourhoods/client"
 
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 //@ts-ignore

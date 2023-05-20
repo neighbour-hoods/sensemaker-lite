@@ -1,14 +1,14 @@
-import { EntryHash } from "@holochain/client"
-import { ConfigDimension, Dimension } from "./dimension"
+import { EntryHashB64 } from "@holochain/client"
+import { ConfigDimension, DimensionEh } from "./dimension"
 import { RangeValue } from "./range"
-import { ConfigResourceDef } from "./resourceDef"
+import { ConfigResourceDef, ResourceDefEh, ResourceEh } from "./resourceDef"
 
 interface CoreCulturalContext {
     name: string,
 }
 export type CulturalContext = CoreCulturalContext & {
-    resource_def_eh: EntryHash,
-    order_by: Array<[EntryHash, OrderingKind]>,
+    resource_def_eh: ResourceDefEh,
+    order_by: Array<[DimensionEh, OrderingKind]>,
     thresholds: Array<Threshold>,
 }
 
@@ -19,14 +19,14 @@ export type ConfigCulturalContext = CoreCulturalContext & {
 }
 
 export interface ContextResult {
-    context_eh: EntryHash,
-    dimension_ehs: Array<EntryHash>, // of objective dimensions
-    result: Array<[EntryHash, Array<RangeValue>]>,
+  context_eh: ContextEh,
+  dimension_ehs: Array<DimensionEh>, // of objective dimensions
+  result: Array<[DimensionEh, Array<RangeValue>]>,
 }
 
 export interface ComputeContextInput {
-    resource_ehs: Array<EntryHash>,
-    context_eh: EntryHash,
+    resource_ehs: Array<ResourceEh>,
+    context_eh: ContextEh,
     can_publish_result: boolean,
 }
 
@@ -35,7 +35,7 @@ interface CoreThreshold {
     value: RangeValue,
 }
 export type Threshold = CoreThreshold & {
-    dimension_eh: EntryHash,
+    dimension_eh: DimensionEh,
 }
 
 export type ConfigThreshold = CoreThreshold & {
@@ -65,3 +65,5 @@ export interface ThresholdKindLessThan {
 export interface ThresholdKindEqual {
     Equal: null,
 }
+
+export type ContextEh = EntryHashB64

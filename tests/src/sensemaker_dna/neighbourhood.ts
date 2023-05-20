@@ -8,7 +8,7 @@ import {
   cleanAllConductors,
 } from "@holochain/tryorama";
 import { decode } from "@msgpack/msgpack";
-import { Assessment, AssessmentWithDimensionAndResource, CreateAssessmentInput, Method, RangeValueInteger, ResourceEh, GetAssessmentsForResourceInput } from "@neighbourhoods/client";
+import { RawAssessment as Assessment, AssessmentWithDimensionAndResource, RawCreateAssessmentInput as CreateAssessmentInput, RawMethod as Method, RangeValueInteger, ResourceEh, RawGetAssessmentsForResourceInput as GetAssessmentsForResourceInput } from "@neighbourhoods/client";
 import { ok } from "assert";
 import test from "tape-promise/tape";
 import { setUpAliceandBob } from "../utils";

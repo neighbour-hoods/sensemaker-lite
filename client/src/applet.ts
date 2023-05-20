@@ -1,28 +1,49 @@
-import { EntryHash } from "@holochain/client";
-import { ConfigCulturalContext } from "./culturalContext";
-import { ConfigDimension, Dimension } from "./dimension";
-import { ConfigMethod } from "./method";
-import { ConfigResourceDef } from "./resourceDef";
-import { Range } from "./range";
+import { EntryHash } from '@holochain/client';
+import { ConfigCulturalContext, ContextEh } from "./culturalContext";
+import { ConfigDimension, DimensionEh } from "./dimension";
+import { ConfigMethod, MethodEh } from "./method";
+import { ConfigResourceDef, ResourceDefEh } from "./resourceDef";
+import { Range, RangeEh } from "./range";
 
-export interface AppletConfig {
-    name: string,
-    role_name: string,
-    ranges: {
-        [rangeName: string]: EntryHash,
-    },
-    dimensions: {
-        [dimensionName: string]: EntryHash,
-    },
-    resource_defs: {
-        [resourceDefName: string]: EntryHash,
-    },
-    methods: {
-        [methodName: string]: EntryHash,
-    },
-    cultural_contexts: {
-        [contextName: string]: EntryHash,
-    }
+interface AppletMetadata {
+  name: string,
+  role_name: string,
+}
+
+export type AppletConfig = AppletMetadata & {
+  ranges: {
+    [rangeName: string]: RangeEh,
+  },
+  dimensions: {
+    [dimensionName: string]: DimensionEh,
+  },
+  resource_defs: {
+    [resourceDefName: string]: ResourceDefEh,
+  },
+  methods: {
+    [methodName: string]: MethodEh,
+  },
+  cultural_contexts: {
+    [contextName: string]: ContextEh,
+  }
+}
+
+export type RawAppletConfig = AppletMetadata & {
+  ranges: {
+    [rangeName: string]: EntryHash,
+  },
+  dimensions: {
+    [dimensionName: string]: EntryHash,
+  },
+  resource_defs: {
+    [resourceDefName: string]: EntryHash,
+  },
+  methods: {
+    [methodName: string]: EntryHash,
+  },
+  cultural_contexts: {
+    [contextName: string]: EntryHash,
+  }
 }
 
 export interface AppletConfigInput {
@@ -41,8 +62,8 @@ export interface CreateAppletConfigInput {
 
 export interface AppletUIConfig {
     [resourceDefEh: string]: {
-      display_objective_dimension: EntryHash, // the dimension eh
-      create_assessment_dimension: EntryHash, // the dimension eh
-      method_for_created_assessment: EntryHash, // the method eh
+      display_objective_dimension: DimensionEh,
+      create_assessment_dimension: DimensionEh,
+      method_for_created_assessment: MethodEh,
   }
 }

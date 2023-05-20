@@ -1,4 +1,4 @@
-import { AgentPubKey, AppAgentClient, AppSignal, RoleName, EntryHash, EntryHashB64, Record as HolochainRecord } from '@holochain/client';
+import { AgentPubKey, AppAgentClient, AppSignal, RoleName, EntryHash, EntryHashB64, Record as HolochainRecord, encodeHashToBase64 } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
 import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
 import {
@@ -10,14 +10,18 @@ import { produce } from 'immer';
 import type { SignalPayload } from './signal';
 import { createContext } from '@lit-labs/context';
 
-import { SensemakerService, deserializeAssessment } from './sensemakerService';
-import { AppletConfig, AppletConfigInput, AppletUIConfig, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, DimensionEh, GetAssessmentsForResourceInput, Method, ResourceDef, ResourceDefEh, ResourceEh, RunMethodInput } from './index';
+import { SensemakerService } from './sensemakerService';
+import {
+  AppletConfig, AppletUIConfig,
+  Assessment, AssessmentEh, CulturalContext, ContextEh, Dimension, DimensionEh, Method, MethodEh, ResourceDef, ResourceDefEh, ResourceEh,
+  ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, GetAssessmentsForResourceInput, RunMethodInput,
+} from './index';
 import type { Option } from './utils';
 
 // zome API output types
 
 export interface ContextResults {
-  [culturalContextName: string]: EntryHash[],
+  [culturalContextName: string]: ResourceEh[],
 }
 
 export type ResourceAssessmentResults = Map<EntryHashB64, Set<Assessment>>
@@ -276,7 +280,7 @@ export class SensemakerStore {
   async getAllAgents() {
     return await this.service.getAllAgents();
   }
-  async createDimension(dimension: Dimension): Promise<EntryHash> {
+  async createDimension(dimension: Dimension): Promise<DimensionEh> {
     const dimensionEh = await this.service.createDimension(dimension);
     this._appletConfig.update(appletConfig => {
       appletConfig.dimensions[dimension.name] = dimensionEh;
@@ -285,7 +289,7 @@ export class SensemakerStore {
     return dimensionEh;
   }
 
-  async createResourceDef(resourceDef: ResourceDef): Promise<EntryHash> {
+  async createResourceDef(resourceDef: ResourceDef): Promise<ResourceDefEh> {
     const resourceDefEh = await this.service.createResourceDef(resourceDef);
     this._appletConfig.update(appletConfig => {
       appletConfig.resource_defs[resourceDef.name] = resourceDefEh;
@@ -294,19 +298,19 @@ export class SensemakerStore {
     return resourceDefEh;
   }
 
-  async createAssessment(assessment: CreateAssessmentInput): Promise<EntryHash> {
+  async createAssessment(assessment: CreateAssessmentInput): Promise<AssessmentEh> {
     const assessmentEh = await this.service.createAssessment(assessment)
 
     // TODO: here is an instance where returning the assessment instead of the hash would be useful
     // NOTE: there is currently a slight discrepancy between the assessment returned from the service and the one stored in the store
     // because we are not returning the assessment, and so recreating the timestamp. This works enough for now, but would be worth it to change
     // it to use optimistic updates such that a draft assessment can be propagated earlier and updated upon completion of the `createAssessment` API call.
-    this.syncNewAssessments([deserializeAssessment({ ...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000 })])
+    this.syncNewAssessments([{ ...assessment, author: encodeHashToBase64(this.myAgentPubKey), timestamp: Date.now() * 1000 }])
 
     return assessmentEh
   }
 
-  async getAssessment(assessmentEh: EntryHash): Promise<Assessment> {
+  async getAssessment(assessmentEh: AssessmentEh): Promise<Assessment> {
     const assessment = await this.service.getAssessment(assessmentEh)
 
     this.syncNewAssessments([assessment])
@@ -326,7 +330,7 @@ export class SensemakerStore {
     assessments.forEach(this._resourceAssessments.next.bind(this._resourceAssessments))
   }
 
-  async createMethod(method: Method): Promise<EntryHash> {
+  async createMethod(method: Method): Promise<MethodEh> {
     const methodEh = await this.service.createMethod(method);
     this._appletConfig.update(appletConfig => {
       appletConfig.methods[method.name] = methodEh;
@@ -343,7 +347,7 @@ export class SensemakerStore {
     return assessment
   }
 
-  async createCulturalContext(culturalContext: CulturalContext): Promise<EntryHash> {
+  async createCulturalContext(culturalContext: CulturalContext): Promise<ContextEh> {
     const contextEh = await this.service.createCulturalContext(culturalContext);
     this._appletConfig.update(appletConfig => {
       appletConfig.cultural_contexts[culturalContext.name] = contextEh;
@@ -352,11 +356,11 @@ export class SensemakerStore {
     return contextEh;
   }
 
-  async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
+  async getCulturalContext(culturalContextEh: ContextEh): Promise<HolochainRecord> {
     return await this.service.getCulturalContext(culturalContextEh)
   }
 
-  async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<EntryHash>> {
+  async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<ResourceEh>> {
     const contextResult = await this.service.computeContext(computeContextInput);
     this._contextResults.update(contextResults => {
       contextResults[contextName] = contextResult;
@@ -380,10 +384,10 @@ export class SensemakerStore {
   }
 
   async updateAppletUIConfig(
-    resourceDefEh: EntryHashB64,
-    currentObjectiveDimensionEh: EntryHash,
-    currentCreateAssessmentDimensionEh: EntryHash,
-    currentMethodEh: EntryHash
+    resourceDefEh: ResourceDefEh,
+    currentObjectiveDimensionEh: DimensionEh,
+    currentCreateAssessmentDimensionEh: DimensionEh,
+    currentMethodEh: MethodEh,
   ) {
     this._appletUIConfig.update(appletUIConfig => {
       appletUIConfig[resourceDefEh] = {
