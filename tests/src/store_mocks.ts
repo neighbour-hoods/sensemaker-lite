@@ -115,7 +115,8 @@ export async function mockAssessmentsStore(withAssessments: MockedResponse) {
   }
 
   // @ts-ignore
-  const s: MockableStore = new SensemakerStore(serviceMock as MockedService)
+  const s: MockableStore = new SensemakerStore()
+  s.setService(serviceMock as unknown as SensemakerService)
 
   s.mockAssessments = (withAssessments) => serviceMock._assessments = withAssessments
 

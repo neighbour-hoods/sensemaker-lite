@@ -155,35 +155,39 @@ export class SensemakerStore {
   */
 
   /** Static info */
-  public myAgentPubKey: AgentPubKey;
-  protected service: SensemakerService;
+  protected service?: SensemakerService;
 
   constructor(
     public client: AppAgentClient,
     public roleName: RoleName,
     public zomeName = 'sensemaker',
   ) {
-    client.on("signal", (signal: AppSignal) => {
-      console.log("received signal in sensemaker store: ", signal)
-      const payload = (signal.payload as SignalPayload);
+    if (client) {
+      client.on("signal", (signal: AppSignal) => {
+        console.log("received signal in sensemaker store: ", signal)
+        const payload = (signal.payload as SignalPayload);
 
-      switch (payload.type) {
-        case "NewAssessment":
-          const assessment = payload.assessment;
-          this._resourceAssessments.update(resourceAssessments => {
-            const maybePrevAssessments = resourceAssessments[assessment.resource_eh];
-            const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
-            resourceAssessments[assessment.resource_eh] = [...prevAssessments, assessment]
-            return resourceAssessments;
-          })
-          break;
-      }
-    });
+        switch (payload.type) {
+          case "NewAssessment":
+            const assessment = payload.assessment;
+            this._resourceAssessments.update(resourceAssessments => {
+              const maybePrevAssessments = resourceAssessments[assessment.resource_eh];
+              const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
+              resourceAssessments[assessment.resource_eh] = [...prevAssessments, assessment]
+              return resourceAssessments;
+            })
+            break;
+        }
+      });
 
-    this.service = new SensemakerService(client, roleName)
-    this.myAgentPubKey = this.service.myPubKey()
+      this.setService(new SensemakerService(client, roleName))
+    }
 
     this._allResourceAssessments = asSet(this._resourceAssessments)
+  }
+
+  setService(s: SensemakerService) {
+    this.service = s
   }
 
   /**
@@ -278,9 +282,11 @@ export class SensemakerStore {
   }
 
   async getAllAgents() {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     return await this.service.getAllAgents();
   }
   async createDimension(dimension: Dimension): Promise<DimensionEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const dimensionEh = await this.service.createDimension(dimension);
     this._appletConfig.update(appletConfig => {
       appletConfig.dimensions[dimension.name] = dimensionEh;
@@ -290,6 +296,7 @@ export class SensemakerStore {
   }
 
   async createResourceDef(resourceDef: ResourceDef): Promise<ResourceDefEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const resourceDefEh = await this.service.createResourceDef(resourceDef);
     this._appletConfig.update(appletConfig => {
       appletConfig.resource_defs[resourceDef.name] = resourceDefEh;
@@ -299,18 +306,20 @@ export class SensemakerStore {
   }
 
   async createAssessment(assessment: CreateAssessmentInput): Promise<AssessmentEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const assessmentEh = await this.service.createAssessment(assessment)
 
     // TODO: here is an instance where returning the assessment instead of the hash would be useful
     // NOTE: there is currently a slight discrepancy between the assessment returned from the service and the one stored in the store
     // because we are not returning the assessment, and so recreating the timestamp. This works enough for now, but would be worth it to change
     // it to use optimistic updates such that a draft assessment can be propagated earlier and updated upon completion of the `createAssessment` API call.
-    this.syncNewAssessments([{ ...assessment, author: encodeHashToBase64(this.myAgentPubKey), timestamp: Date.now() * 1000 }])
+    this.syncNewAssessments([{ ...assessment, author: encodeHashToBase64(this.service.myPubKey()), timestamp: Date.now() * 1000 }])
 
     return assessmentEh
   }
 
   async getAssessment(assessmentEh: AssessmentEh): Promise<Assessment> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const assessment = await this.service.getAssessment(assessmentEh)
 
     this.syncNewAssessments([assessment])
@@ -319,6 +328,7 @@ export class SensemakerStore {
   }
 
   async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Assessment[]> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const result = await this.service.getAssessmentsForResources(getAssessmentsInput);
 
     this.syncNewAssessments(result)
@@ -331,6 +341,7 @@ export class SensemakerStore {
   }
 
   async createMethod(method: Method): Promise<MethodEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const methodEh = await this.service.createMethod(method);
     this._appletConfig.update(appletConfig => {
       appletConfig.methods[method.name] = methodEh;
@@ -340,6 +351,7 @@ export class SensemakerStore {
   }
 
   async runMethod(runMethodInput: RunMethodInput): Promise<Assessment> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const assessment = await this.service.runMethod(runMethodInput);
 
     this.syncNewAssessments([assessment])
@@ -348,6 +360,7 @@ export class SensemakerStore {
   }
 
   async createCulturalContext(culturalContext: CulturalContext): Promise<ContextEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const contextEh = await this.service.createCulturalContext(culturalContext);
     this._appletConfig.update(appletConfig => {
       appletConfig.cultural_contexts[culturalContext.name] = contextEh;
@@ -357,10 +370,12 @@ export class SensemakerStore {
   }
 
   async getCulturalContext(culturalContextEh: ContextEh): Promise<HolochainRecord> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     return await this.service.getCulturalContext(culturalContextEh)
   }
 
   async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<ResourceEh>> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const contextResult = await this.service.computeContext(computeContextInput);
     this._contextResults.update(contextResults => {
       contextResults[contextName] = contextResult;
@@ -370,6 +385,7 @@ export class SensemakerStore {
   }
 
   async checkIfAppletConfigExists(appletName: string): Promise<Option<AppletConfig>> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const maybeAppletConfig = await this.service.checkIfAppletConfigExists(appletName);
     if (maybeAppletConfig) {
       this._appletConfig.update(() => maybeAppletConfig)
@@ -378,6 +394,7 @@ export class SensemakerStore {
   }
 
   async registerApplet(appletConfigInput: CreateAppletConfigInput): Promise<AppletConfig> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const appletConfig = await this.service.registerApplet(appletConfigInput);
     this._appletConfig.update(() => appletConfig);
     return appletConfig;
