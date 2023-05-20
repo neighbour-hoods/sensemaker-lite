@@ -288,20 +288,18 @@ export class SensemakerStore {
   async createDimension(dimension: Dimension): Promise<DimensionEh> {
     if (!this.service) throw new Error("SensemakerStore service not connected");
     const dimensionEh = await this.service.createDimension(dimension);
-    this._appletConfig.update(appletConfig => {
-      appletConfig.dimensions[dimension.name] = dimensionEh;
-      return appletConfig;
-    });
+    this._appletConfig.update(appletConfig => produce(appletConfig, draft => {
+      draft.dimensions[dimension.name] = dimensionEh
+    }));
     return dimensionEh;
   }
 
   async createResourceDef(resourceDef: ResourceDef): Promise<ResourceDefEh> {
     if (!this.service) throw new Error("SensemakerStore service not connected");
     const resourceDefEh = await this.service.createResourceDef(resourceDef);
-    this._appletConfig.update(appletConfig => {
-      appletConfig.resource_defs[resourceDef.name] = resourceDefEh;
-      return appletConfig;
-    });
+    this._appletConfig.update(appletConfig => produce(appletConfig, draft => {
+      draft.resource_defs[resourceDef.name] = resourceDefEh
+    }));
     return resourceDefEh;
   }
 
@@ -343,10 +341,9 @@ export class SensemakerStore {
   async createMethod(method: Method): Promise<MethodEh> {
     if (!this.service) throw new Error("SensemakerStore service not connected");
     const methodEh = await this.service.createMethod(method);
-    this._appletConfig.update(appletConfig => {
-      appletConfig.methods[method.name] = methodEh;
-      return appletConfig;
-    });
+    this._appletConfig.update(appletConfig => produce(appletConfig, draft => {
+      draft.methods[method.name] = methodEh
+    }));
     return methodEh;
   }
 
@@ -362,10 +359,9 @@ export class SensemakerStore {
   async createCulturalContext(culturalContext: CulturalContext): Promise<ContextEh> {
     if (!this.service) throw new Error("SensemakerStore service not connected");
     const contextEh = await this.service.createCulturalContext(culturalContext);
-    this._appletConfig.update(appletConfig => {
-      appletConfig.cultural_contexts[culturalContext.name] = contextEh;
-      return appletConfig;
-    });
+    this._appletConfig.update(appletConfig => produce(appletConfig, draft => {
+      draft.cultural_contexts[culturalContext.name] = contextEh
+    }));
     return contextEh;
   }
 
@@ -384,9 +380,9 @@ export class SensemakerStore {
     return contextResult;
   }
 
-  async checkIfAppletConfigExists(appletName: string): Promise<Option<AppletConfig>> {
+  async loadAppletConfig(appletName: string): Promise<Option<AppletConfig>> {
     if (!this.service) throw new Error("SensemakerStore service not connected");
-    const maybeAppletConfig = await this.service.checkIfAppletConfigExists(appletName);
+    const maybeAppletConfig = await this.service.loadAppletConfig(appletName);
     if (maybeAppletConfig) {
       this._appletConfig.update(() => maybeAppletConfig)
     }
@@ -406,15 +402,13 @@ export class SensemakerStore {
     currentCreateAssessmentDimensionEh: DimensionEh,
     currentMethodEh: MethodEh,
   ) {
-    this._appletUIConfig.update(appletUIConfig => {
-      appletUIConfig[resourceDefEh] = {
+    this._appletUIConfig.update(appletUIConfig => produce(appletUIConfig, draft => {
+      draft[resourceDefEh] = {
         display_objective_dimension: currentObjectiveDimensionEh,
         create_assessment_dimension: currentCreateAssessmentDimensionEh,
         method_for_created_assessment: currentMethodEh
       }
-      return appletUIConfig;
-    }
-    )
+    }))
   }
 
   // close all active streams, ending any straggling UI or dependant framework subscribers

@@ -120,7 +120,7 @@ export class SensemakerService {
     })).map(decodeHashFromBase64);
   }
 
-  async checkIfAppletConfigExists(appletName: string): Promise<Option<AppletConfig>> {
+  async loadAppletConfig(appletName: string): Promise<Option<AppletConfig>> {
     return deserializeAppletConfig(await this.callZome('check_if_applet_config_exists', appletName));
   }
 
