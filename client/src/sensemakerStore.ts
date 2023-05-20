@@ -2,6 +2,7 @@ import {
   AgentPubKey,
   AppAgentClient,
   AppSignal,
+  encodeHashToBase64,
   decodeHashFromBase64,
   EntryHash,
   EntryHashB64,
@@ -19,7 +20,6 @@ import {
   CreateAssessmentInput,
   CulturalContext,
   Dimension,
-  DimensionEh,
   getAssessmentKey,
   getAssessmentKeyValues,
   GetAssessmentsForResourceInput,
@@ -30,8 +30,7 @@ import {
   MapAssessmentsByHashByResource,
   Method,
   ResourceDef,
-  ResourceDefEh,
-  ResourceEh,
+  ResourceDefEh, ResourceEh, DimensionEh, MethodEh, ContextEh, AssessmentEh,
   RunMethodInput,
   SignalPayload,
   VecAssessmentsByHash
@@ -83,29 +82,35 @@ export class SensemakerStore {
   */
 
   /** Static info */
-  public myAgentPubKey: AgentPubKey;
-  protected service: SensemakerService;
+  protected service?: SensemakerService;
 
-  constructor(public client: AppAgentClient, public roleName: RoleName, public zomeName = 'sensemaker')
-  {
-    client.on("signal", (signal: AppSignal) => {
-      console.log("received signal in sensemaker store: ", signal)
-      const payload = (signal.payload as SignalPayload);
+  constructor(
+    public client: AppAgentClient,
+    public roleName: RoleName,
+    public zomeName = 'sensemaker',
+  ) {
+    if (client) {
+      client.on("signal", (signal: AppSignal) => {
+        console.log("received signal in sensemaker store: ", signal)
+        const payload = (signal.payload as SignalPayload);
 
-      switch (payload.type) {
-        case "NewAssessment":
-          const assessmentMap = payload.assessment_map;
-          this._updateAssessmentIndices(assessmentMap);
-          break;
-      }
-    });
+        switch (payload.type) {
+          case "NewAssessment":
+            const assessmentMap = payload.assessment_map;
+            this._updateAssessmentIndices(assessmentMap);
+            break;
+        }
+      });
 
-    this.service = new SensemakerService(client, roleName);
-    this.myAgentPubKey = this.service.myPubKey();
+      this.setService(new SensemakerService(client, roleName))
+    }
+  }
+
+  setService(s: SensemakerService) {
+    this.service = s
   }
 
   _updateAssessmentIndices(assessmentMap: MapAssessmentsByHash) {
-
     // Iterate over input values
     for (let [eh, assessment] of getAssessmentKeyValues(assessmentMap)) {
       const resource_eh = getResourceHash(assessment);
@@ -135,7 +140,6 @@ export class SensemakerStore {
   }
 
   _updateResourceAssessmentIndices(resourceAssessmentsMap: MapAssessmentsByHashByResource) {
-
     let resourceAssessmentsVec: VecAssessmentsByHash = {};
 
     for (let [resource_eh, assessmentMap] of Object.entries(resourceAssessmentsMap)) {
@@ -200,10 +204,12 @@ export class SensemakerStore {
   }
 
   async getAllAgents() {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     return await this.service.getAllAgents();
   }
 
-  async createDimension(dimension: Dimension): Promise<EntryHash> {
+  async createDimension(dimension: Dimension): Promise<DimensionEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const dimensionEh = await this.service.createDimension(dimension);
     this._appletConfig.update(appletConfig => {
       appletConfig.dimensions[dimension.name] = dimensionEh;
@@ -212,7 +218,8 @@ export class SensemakerStore {
     return dimensionEh;
   }
 
-  async createResourceDef(resourceDef: ResourceDef): Promise<EntryHash> {
+  async createResourceDef(resourceDef: ResourceDef): Promise<ResourceDefEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const resourceDefEh = await this.service.createResourceDef(resourceDef);
     this._appletConfig.update(appletConfig => {
       appletConfig.resource_defs[resourceDef.name] = resourceDefEh;
@@ -221,22 +228,28 @@ export class SensemakerStore {
     return resourceDefEh;
   }
 
-  async createAssessment(assessment: CreateAssessmentInput): Promise<EntryHash> {
+  async createAssessment(assessment: CreateAssessmentInput): Promise<AssessmentEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const assessmentMap = await this.service.createAssessment(assessment);
     this._updateAssessmentIndices(assessmentMap);
     return decodeHashFromBase64(getAssessmentKey(assessmentMap)!);
   }
 
-  async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getAssessment(assessmentEh)
+  async getAssessment(assessmentEh: AssessmentEh): Promise<Assessment> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
+    const assessment = await this.service.getAssessment(assessmentEh)
+    this._updateAssessmentIndices({ [encodeHashToBase64(assessment.resource_eh)]: assessment })
+    return assessment
   }
 
-  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Record<EntryHashB64, Array<Assessment>>> {
+  async loadAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<VecAssessmentsByHash> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const resourceAssessments: MapAssessmentsByHashByResource = await this.service.getAssessmentsForResources(getAssessmentsInput);
     return this._updateResourceAssessmentIndices(resourceAssessments);
   }
 
-  async createMethod(method: Method): Promise<EntryHash> {
+  async createMethod(method: Method): Promise<MethodEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const methodEh = await this.service.createMethod(method);
     this._appletConfig.update(appletConfig => {
       appletConfig.methods[method.name] = methodEh;
@@ -246,12 +259,14 @@ export class SensemakerStore {
   }
 
   async runMethod(runMethodInput: RunMethodInput): Promise<Assessment> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     let assessmentMap = await this.service.runMethod(runMethodInput);
     this._updateAssessmentIndices(assessmentMap);
     return getAssessmentValue(assessmentMap)!;
   }
 
-  async createCulturalContext(culturalContext: CulturalContext): Promise<EntryHash> {
+  async createCulturalContext(culturalContext: CulturalContext): Promise<ContextEh> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const contextEh = await this.service.createCulturalContext(culturalContext);
     this._appletConfig.update(appletConfig => {
       appletConfig.cultural_contexts[culturalContext.name] = contextEh;
@@ -260,11 +275,13 @@ export class SensemakerStore {
     return contextEh;
   }
 
-  async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
+  async getCulturalContext(culturalContextEh: ContextEh): Promise<CulturalContext> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     return await this.service.getCulturalContext(culturalContextEh)
   }
 
-  async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<EntryHash>> {
+  async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<ResourceEh>> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const contextResult = await this.service.computeContext(computeContextInput);
     this._contextResults.update(contextResults => {
       contextResults[contextName] = contextResult;
@@ -274,6 +291,7 @@ export class SensemakerStore {
   }
 
   async checkIfAppletConfigExists(appletName: string): Promise<Option<AppletConfig>> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const maybeAppletConfig = await this.service.checkIfAppletConfigExists(appletName);
     if (maybeAppletConfig) {
       this._appletConfig.update(() => maybeAppletConfig)
@@ -282,14 +300,15 @@ export class SensemakerStore {
   }
 
   async registerApplet(appletConfigInput: CreateAppletConfigInput): Promise<AppletConfig> {
+    if (!this.service) throw new Error("SensemakerStore service not connected");
     const appletConfig = await this.service.registerApplet(appletConfigInput);
     this._appletConfig.update(() => appletConfig);
     return appletConfig;
   }
 
   async updateAppletUIConfig(
-    resourceDefEh: EntryHashB64, 
-    currentObjectiveDimensionEh: EntryHash, 
+    resourceDefEh: EntryHashB64,
+    currentObjectiveDimensionEh: EntryHash,
     currentCreateAssessmentDimensionEh: EntryHash,
     currentMethodEh: EntryHash
   ) {

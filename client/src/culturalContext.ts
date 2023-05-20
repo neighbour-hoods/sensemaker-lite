@@ -65,3 +65,5 @@ export interface ThresholdKindLessThan {
 export interface ThresholdKindEqual {
     Equal: null,
 }
+
+export type ContextEh = EntryHash

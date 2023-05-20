@@ -12,11 +12,11 @@ export class SensemakerService {
     myPubKey(): AgentPubKey {
       return this.client.myPubKey
     }
-    
+
   async getAllAgents(): Promise<AgentPubKey[]> {
     return this.callZome('get_all_agents', null);
   }
-  
+
   async createDimension(dimension: Dimension): Promise<EntryHash> {
     return this.callZome('create_dimension', dimension);
   }
@@ -29,14 +29,14 @@ export class SensemakerService {
     return this.callZome('create_assessment', assessment);
   }
 
-  async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
+  async getAssessment(assessmentEh: EntryHash): Promise<Assessment> {
     return this.callZome('get_assessment', assessmentEh);
   }
 
   async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<MapAssessmentsByHashByResource> {
     return this.callZome('get_assessments_for_resources', getAssessmentsInput);
   }
-  
+
   async createMethod(method: Method): Promise<EntryHash> {
     return this.callZome('create_method', method);
   }
@@ -49,7 +49,7 @@ export class SensemakerService {
     return this.callZome('create_cultural_context', culturalContext);
   }
 
-  async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
+  async getCulturalContext(culturalContextEh: EntryHash): Promise<CulturalContext> {
     return this.callZome('get_cultural_context', culturalContextEh);
   }
 
