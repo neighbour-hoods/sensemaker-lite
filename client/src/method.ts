@@ -40,3 +40,5 @@ export interface ProgramSum {
 export interface ProgramAverage {
     Average: null,
 }
+
+export type MethodEh = EntryHash
