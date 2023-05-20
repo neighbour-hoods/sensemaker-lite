@@ -4,7 +4,7 @@ import {
   Assessment, RawAssessment,
   ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, GetAssessmentsForResourceInput,
   CulturalContext, Dimension, Method, ResourceDef, RunMethodInput,
-  DimensionEh, ResourceDefEh, AssessmentEh, MethodEh, ContextEh, ResourceEh,
+  DimensionEh, ResourceDefEh, AssessmentEh, MethodEh, ContextEh, ResourceEh, Range, RangeEh,
 } from './index';
 import type { Option } from './utils';
 
@@ -27,7 +27,8 @@ export function deserializeAssessment(a: RawAssessment): Assessment {
   }
 }
 
-export function deserializeAppletConfig(c: RawAppletConfig): AppletConfig {
+export function deserializeAppletConfig(c: RawAppletConfig | null): AppletConfig | null {
+  if (!c) return null
   return {
     ...c,
     ranges: objectMap(c.ranges, encodeHashToBase64),
@@ -125,7 +126,7 @@ export class SensemakerService {
   }
 
   async registerApplet(appletConfig: CreateAppletConfigInput): Promise<AppletConfig> {
-    return deserializeAppletConfig(await this.callZome('register_applet', appletConfig));
+    return deserializeAppletConfig(await this.callZome('register_applet', appletConfig)) as AppletConfig;
   }
 
   private callZome(fn_name: string, payload: any) {
