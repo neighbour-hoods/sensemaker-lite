@@ -62,7 +62,7 @@ Retrieves a cultural context from the sensemaker-lite.
 
 Computes a context result by taking a list of resource entry hashes and orders and filters them based on the cultural context.
 
-`async checkIfAppletConfigExists(appletName: string): Promise<`[`Option`](../src/utils.ts#L4)`<`[`AppletConfig`](../src/applet.ts#L8-L26)`>>`
+`async loadAppletConfig(appletName: string): Promise<`[`Option`](../src/utils.ts#L4)`<`[`AppletConfig`](../src/applet.ts#L8-L26)`>>`
 
 Checks if an applet configuration exists for the specified applet (by name) and returns the `AppletConfig` if it does, otherwise return `null`.
 
