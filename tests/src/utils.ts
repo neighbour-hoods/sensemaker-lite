@@ -149,6 +149,8 @@ export const installAgent = async (
     await admin.enableApp({ installed_app_id: agentHapp.installed_app_id });
     console.log("app installed", agentHapp);
     agentsHapps.push(agentHapp);
+
+    conductor.connectAppAgentInterface(`${agentName}_sensemaker`)
   } catch (e) {
     console.log("error has happened in installation: ", e);
   }
