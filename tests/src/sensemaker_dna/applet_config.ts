@@ -1,13 +1,14 @@
 type AppEntryDef = import('@holochain/client').AppEntryDef;
 type EntryHash = import('@holochain/client').EntryHash;
 
-import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, RawCulturalContext as CulturalContext, RawDimension as Dimension, RawMethod as Method, Range, RawThreshold as Threshold } from "@neighbourhoods/client"
+import { AppletConfig, ConfigCulturalContext, ConfigMethod, ResourceDef, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, Dimension, Method, Range, Threshold, SensemakerService } from "@neighbourhoods/client"
 
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 //@ts-ignore
 import test from "tape-promise/tape";
 
 import { setUpAliceandBob } from "../utils";
+import { decodeHashFromBase64, encodeHashToBase64 } from "@holochain/client";
 
 const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
 
@@ -26,21 +27,7 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                 provider_cell_id_bob,
             } = await setUpAliceandBob(true, app_entry_def);
 
-            const callZomeAlice = async (
-                zome_name: string,
-                fn_name: string,
-                payload: any,
-                is_ss = false
-            ) => {
-                return await alice.appWs().callZome({
-                    cap_secret: null,
-                    cell_id: is_ss ? ss_cell_id_alice : provider_cell_id_alice,
-                    zome_name,
-                    fn_name,
-                    payload,
-                    provenance: alice_agent_key,
-                });
-            };
+            const AliceSvc = new SensemakerService(alice.appAgentWs(), 'sensemaker_dna')
 
             try {
                 await scenario.shareAllAgents();
@@ -53,13 +40,7 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     },
                 };
 
-                const rangeHash: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_range",
-                    integerRange,
-                    true
-                );
-
+                const rangeHash = await AliceSvc.createRange(integerRange);
                 t.ok(rangeHash);
 
                 const dimensionName = "importance"
@@ -75,12 +56,12 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     computed: false,
                 }
 
-                const dimensionHash: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_dimension",
-                    dimension,
-                    true
-                );
+                const dimensionHash = await AliceSvc.createDimension({
+                  name: dimensionName,
+                  range_eh: rangeHash,
+                  computed: false,
+                })
+
                 t.ok(dimensionHash);
                 console.log('dimension hash', dimensionHash)
 
@@ -91,12 +72,7 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     },
                 };
 
-                const rangeHash2: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_range",
-                    integerRange2,
-                    true
-                );
+                const rangeHash2 = await AliceSvc.createRange(integerRange2);
                 t.ok(rangeHash2);
 
                 const objectiveDimension: Dimension = {
@@ -111,18 +87,14 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     computed: true,
                 }
 
-                const objectiveDimensionHash: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_dimension",
-                    objectiveDimension,
-                    true
-                );
+                const objectiveDimensionHash = await AliceSvc.createDimension(objectiveDimension)
+
                 t.ok(objectiveDimensionHash);
 
                 let app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
                 // waiting for sensemaker-lite-types to be updated
                 // const resourceDef: ResourceDef = {
-                const resourceDef: any = {
+                const resourceDef: ResourceDef = {
                     name: "task_item",
                     base_types: [app_entry_def],
                     dimension_ehs: [dimensionHash]
@@ -130,18 +102,14 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
 
                 // waiting for sensemaker-lite-types to be updated
                 // const configResourceDef: ConfigResourceDef = {
-                const configResourceDef: any = {
+                const configResourceDef: ConfigResourceDef = {
                     name: resourceDef.name,
                     base_types: resourceDef.base_types,
                     dimensions: [configDimension]
                 }
 
-                const resourceDefEh: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_resource_def",
-                    resourceDef,
-                    true
-                );
+                const resourceDefEh = await AliceSvc.createResourceDef(resourceDef)
+
                 t.ok(resourceDefEh);
 
                 const methodName = "total_importance_method"
@@ -165,13 +133,9 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     requires_validation: totalImportanceMethod.requires_validation,
                 }
 
-                const methodEh: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_method",
-                    totalImportanceMethod,
-                    true
-                );
+                const methodEh = await AliceSvc.createMethod(totalImportanceMethod);
                 t.ok(methodEh);
+
                 const threshold: Threshold = {
                     dimension_eh: objectiveDimensionHash,
                     kind: { GreaterThan: null },
@@ -198,12 +162,7 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     order_by: [[configObjectiveDimension, { Biggest: null }]], // DimensionEh
                 }
 
-                const contextEh: EntryHash = await callZomeAlice(
-                    "sensemaker",
-                    "create_cultural_context",
-                    culturalContext,
-                    true
-                );
+                const contextEh = await AliceSvc.createCulturalContext(culturalContext);
                 t.ok(contextEh);
 
                 // create a config type
@@ -237,29 +196,18 @@ const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: 
                     role_name: "test_provider_dna"
                 }
 
-                let maybeAppletConfig: any = await callZomeAlice(
-                    "sensemaker",
-                    "check_if_applet_config_exists",
+                let maybeAppletConfig: AppletConfig | null = await AliceSvc.loadAppletConfig(
                     appletConfigInput.applet_config_input.name,
-                    true
                 );
                 t.ok(!maybeAppletConfig);
 
-                const returnedAppletConfig: any = await callZomeAlice(
-                    "sensemaker",
-                    "register_applet",
-                    appletConfigInput,
-                    true
-                );
+                const returnedAppletConfig: AppletConfig = await AliceSvc.registerApplet(appletConfigInput);
                 console.log("this is the applet config added", returnedAppletConfig);
                 t.ok(returnedAppletConfig);
                 t.deepEqual(JSON.stringify(returnedAppletConfig), JSON.stringify(appletConfig))
 
-                maybeAppletConfig = await callZomeAlice(
-                    "sensemaker",
-                    "check_if_applet_config_exists",
-                    appletConfigInput.applet_config_input.name,
-                    true
+                maybeAppletConfig = await AliceSvc.loadAppletConfig(
+                  appletConfigInput.applet_config_input.name,
                 );
                 t.ok(maybeAppletConfig);
                 t.deepEqual(JSON.stringify(maybeAppletConfig), JSON.stringify(appletConfig))
