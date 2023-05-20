@@ -54,6 +54,10 @@ export class SensemakerService {
     return this.callZome('get_all_agents', null);
   }
 
+  async createRange(range: Range): Promise<RangeEh> {
+    return encodeHashToBase64(await this.callZome('create_range', range));
+  }
+
   async createDimension(dimension: Dimension): Promise<DimensionEh> {
     return encodeHashToBase64(await this.callZome('create_dimension', {
       ...dimension,
