@@ -1,4 +1,4 @@
-import { EntryHashB64 } from "@holochain/client"
+import { EntryHash, EntryHashB64 } from "@holochain/client"
 import { ConfigDimension, DimensionEh } from "./dimension"
 import { RangeValue } from "./range"
 import { ConfigResourceDef, ResourceDefEh, ResourceEh } from "./resourceDef"
@@ -10,6 +10,12 @@ export type CulturalContext = CoreCulturalContext & {
     resource_def_eh: ResourceDefEh,
     order_by: Array<[DimensionEh, OrderingKind]>,
     thresholds: Array<Threshold>,
+}
+
+export type RawCulturalContext = CoreCulturalContext & {
+  resource_def_eh: EntryHash,
+  order_by: Array<[EntryHash, OrderingKind]>,
+  thresholds: Array<RawThreshold>,
 }
 
 export type ConfigCulturalContext = CoreCulturalContext & {
@@ -36,6 +42,9 @@ interface CoreThreshold {
 }
 export type Threshold = CoreThreshold & {
     dimension_eh: DimensionEh,
+}
+export type RawThreshold = CoreThreshold & {
+  dimension_eh: EntryHash,
 }
 
 export type ConfigThreshold = CoreThreshold & {
