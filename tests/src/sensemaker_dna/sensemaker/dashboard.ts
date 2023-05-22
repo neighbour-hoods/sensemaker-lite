@@ -289,15 +289,17 @@ export default () => {
         // define objective dimension
 
         // fetch all assessments
-        const allAssessments: Array<AssessmentWithDimensionAndResource> = await callZomeAlice(
+        const allAssessments = await callZomeAlice(
           "sensemaker",
           "get_all_assessments",
           null,
           true
         );
         console.log('all assessments', allAssessments)
-        t.deepEqual(allAssessments.length, 6);
-        const allAssessedPosts = allAssessments.map((a) => decode((a.resource!.entry as any).Present.entry) as TestPost)
+        t.deepEqual(Object.values(allAssessments).length, 6);
+        //@ts-ignore
+        const allAssessedPosts = Object.values(allAssessments).map((a) => decode((a.resource!.entry as any).Present.entry) as TestPost)
+        console.log(allAssessedPosts);
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost)))
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost2)))
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost3)))

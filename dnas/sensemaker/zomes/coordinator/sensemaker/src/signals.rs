@@ -1,11 +1,11 @@
 use hdk::prelude::*;
-use sensemaker_integrity::Assessment;
+use sensemaker_integrity::MapAssessmentsByHash;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Signal {
     NewAssessment {
-        assessment: Assessment,
+        assessment_map: MapAssessmentsByHash,
     },
 }
 

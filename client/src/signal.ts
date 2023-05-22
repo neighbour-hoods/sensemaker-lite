@@ -1,7 +1,7 @@
-import { Assessment } from "./assessment";
+import { MapAssessmentsByHash } from "./assessment";
 
 export type SignalPayload = 
 | {
     type: "NewAssessment",
-    assessment: Assessment,
+    assessment_map: MapAssessmentsByHash,
 }

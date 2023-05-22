@@ -1,18 +1,19 @@
 use std::collections::BTreeMap;
 
 use hdk::prelude::*;
-use sensemaker_integrity::Assessment;
+use sensemaker_integrity::{
+    Assessment,
+    CreateAssessmentInput, MapAssessmentsByHash
+};
 use sensemaker_integrity::EntryTypes;
 use sensemaker_integrity::Method;
 use sensemaker_integrity::Program;
 use sensemaker_integrity::RangeValue;
 
 use crate::create_assessment;
-use crate::get_assessment;
 use crate::utils::entry_from_record;
 use crate::utils::flatten_btree_map;
-use crate::utils::get_assessments_for_resource_inner;
-use crate::CreateAssessmentInput;
+use crate::assessment::get_assessments_for_resource_inner;
 
 #[hdk_extern]
 pub fn get_method(entry_hash: EntryHash) -> ExternResult<Option<Record>> {
@@ -26,7 +27,7 @@ pub fn create_method(method: Method) -> ExternResult<EntryHash> {
 }
 
 #[hdk_extern]
-pub fn run_method(input: RunMethodInput) -> ExternResult<Option<Assessment>> {
+pub fn run_method(input: RunMethodInput) -> ExternResult<MapAssessmentsByHash> {
     let maybe_record = get_method(input.method_eh.clone())?;
     if let Some(record) = maybe_record {
         let method = entry_from_record::<Method>(record)?;
@@ -37,6 +38,7 @@ pub fn run_method(input: RunMethodInput) -> ExternResult<Option<Assessment>> {
             input.resource_eh.clone(),
             method.input_dimension_ehs.clone(),
         )?;
+
         // now have all assessments with the associated dimension hash
         // stored as a BTreeMap in case its important to know which dimension the assessment is on
         // now check what program it is, and depending on the range value type do math accordingly
@@ -45,16 +47,7 @@ pub fn run_method(input: RunMethodInput) -> ExternResult<Option<Assessment>> {
         let maybe_objective_assessment =
             compute_objective_assessment(method, assessments, input.resource_eh)?;
         if let Some(objective_assessment) = maybe_objective_assessment {
-            // TODO: may want to change `create_assessment` to return the created assessment rather than the hash. For now sticking with this for minimal side-effects.
-            let assessment_eh = create_assessment(objective_assessment)?;
-            let maybe_assessment = get_assessment(assessment_eh)?;
-            if let Some(assessment) = maybe_assessment {
-                Ok(Some(entry_from_record::<Assessment>(assessment)?))
-            } else {
-                Err(wasm_error!(WasmErrorInner::Guest(String::from(
-                    "not able to get method created assessment"
-                ))))
-            }
+            create_assessment(objective_assessment)
         } else {
             Err(wasm_error!(WasmErrorInner::Guest(String::from(
                 "Issue With Computation"

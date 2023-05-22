@@ -1,6 +1,44 @@
-import { AgentPubKey, AppAgentClient, AppSignal, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
+import {
+  AgentPubKey,
+  AppAgentClient,
+  AppSignal,
+  decodeHashFromBase64,
+  encodeHashToBase64,
+  EntryHash,
+  EntryHashB64,
+  Record as HolochainRecord,
+  RecordEntry as HolochainRecordEntry,
+  RoleName
+} from '@holochain/client';
+import { decode } from '@msgpack/msgpack';
 import { SensemakerService } from './sensemakerService';
-import { AppletConfig, AppletConfigInput, AppletUIConfig, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, DimensionEh, GetAssessmentsForResourceInput, Method, ResourceDef, ResourceDefEh, ResourceEh, RunMethodInput, SignalPayload } from './index';
+import {
+  AppletConfig,
+  AppletConfigInput,
+  AppletUIConfig,
+  Assessment,
+  ComputeContextInput,
+  CreateAppletConfigInput,
+  CreateAssessmentInput,
+  CulturalContext,
+  Dimension,
+  DimensionEh,
+  getAssessmentKey,
+  getAssessmentKeyValues,
+  GetAssessmentsForResourceInput,
+  getAssessmentValue,
+  getDimensionHash,
+  getResourceHash,
+  MapAssessmentsByHash,
+  MapAssessmentsByHashByResource,
+  Method,
+  ResourceDef,
+  ResourceDefEh,
+  ResourceEh,
+  RunMethodInput,
+  SignalPayload,
+  VecAssessmentsByHash
+} from './index';
 import { derived, get, Writable, writable } from 'svelte/store';
 import { Option } from './utils';
 import { createContext } from '@lit-labs/context';
@@ -8,6 +46,15 @@ import { createContext } from '@lit-labs/context';
 interface ContextResults {
   [culturalContextName: string]: EntryHash[],
 }
+
+type AssessmentMap = Map<EntryHashB64, Assessment>;
+type AssessmentIndex = Map<EntryHashB64, Set<Assessment>>;
+// type EhAssessmentMap = Map<EntryHashB64, AssessmentMap>;
+
+const constructAssessmentMap = (): AssessmentMap => new Map<EntryHashB64, Assessment>()
+const constructAssessmentIndex = (): AssessmentIndex => new Map<EntryHashB64, Set<Assessment>>()
+// const constructEhAssessmentMap = (): EhAssessmentMap => new Map<EntryHashB64, AssessmentMap>()
+
 export class SensemakerStore {
   // store any value here that would benefit from being a store
   // like cultural context entry hash and then the context result vec
@@ -21,8 +68,12 @@ export class SensemakerStore {
     [resourceEh: string]: Array<Assessment>
   }
   */
+
+  _allAssessments: AssessmentMap = constructAssessmentMap();
+  _resourceIndex: AssessmentIndex = constructAssessmentIndex();
+
   _resourceAssessments: Writable<{ [entryHash: string]: Array<Assessment> }> = writable({});
-  
+
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
   /*
@@ -46,19 +97,79 @@ export class SensemakerStore {
 
       switch (payload.type) {
         case "NewAssessment":
-          const assessment = payload.assessment;
-          this._resourceAssessments.update(resourceAssessments => {
-            const maybePrevAssessments = resourceAssessments[encodeHashToBase64(assessment.resource_eh)];
-            const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
-            resourceAssessments[encodeHashToBase64(assessment.resource_eh)] = [...prevAssessments, assessment]
-            return resourceAssessments;
-          })
+          const assessmentMap = payload.assessment_map;
+          this._updateAssessmentIndices(assessmentMap);
           break;
       }
     });
-    
+
     this.service = new SensemakerService(client, roleName);
     this.myAgentPubKey = this.service.myPubKey();
+  }
+
+  _updateAssessmentIndices(assessmentMap: MapAssessmentsByHash) {
+
+    // Iterate over input values
+    for (let [eh, assessment] of getAssessmentKeyValues(assessmentMap)) {
+      const resource_eh = getResourceHash(assessment);
+      // const dimension_eh = getDimensionHash(assessment);
+      /**
+       * XXX: This assumes we don't ever update assessments.
+       *      If that's not true, remove the conditional.
+       */
+      // If we have a new resource, add it. Otherwise, ignore it.
+      if (!this._allAssessments.has(eh)) {
+        this._allAssessments.set(eh, assessment);
+        // Add assessment to resource index
+        if (!this._resourceIndex.has(resource_eh)) {
+          this._resourceIndex.set(resource_eh, new Set([assessment]));
+        } else {
+          this._resourceIndex.get(resource_eh)?.add(assessment);
+        }
+      }
+    }
+
+    this._resourceAssessments.update(resourceAssessments => {
+      for (let [resource_eh, assessmentSet] of this._resourceIndex) {
+        resourceAssessments[resource_eh] = Array.from(assessmentSet);
+      }
+      return resourceAssessments;
+    })
+  }
+
+  _updateResourceAssessmentIndices(resourceAssessmentsMap: MapAssessmentsByHashByResource) {
+
+    let resourceAssessmentsVec: VecAssessmentsByHash = {};
+
+    for (let [resource_eh, assessmentMap] of Object.entries(resourceAssessmentsMap)) {
+      resourceAssessmentsVec[resource_eh] = Object.values(assessmentMap)
+      // Iterate over input values
+      for (let [eh, assessment] of getAssessmentKeyValues(assessmentMap)) {
+        /**
+         * XXX: This assumes we don't ever update assessments.
+         *      If that's not true, remove the conditional.
+         */
+        // If we have a new resource, add it. Otherwise, ignore it.
+        if (!this._allAssessments.has(eh)) {
+          this._allAssessments.set(eh, assessment);
+          // Add assessment to resource index
+          if (!this._resourceIndex.has(resource_eh)) {
+            this._resourceIndex.set(resource_eh, new Set([assessment]));
+          } else {
+            this._resourceIndex.get(resource_eh)?.add(assessment);
+          }
+        }
+      }
+    }
+
+    this._resourceAssessments.update(resourceAssessments => {
+      for (let [resource_eh, assessmentSet] of this._resourceIndex) {
+        resourceAssessments[resource_eh] = Array.from(assessmentSet);
+      }
+      return resourceAssessments;
+    })
+
+    return resourceAssessmentsVec;
   }
 
   // if provided a list of resource ehs, filter the assessments to only those resources, and return that object, otherwise return the whole thing.
@@ -94,6 +205,7 @@ export class SensemakerStore {
   async getAllAgents() {
     return await this.service.getAllAgents();
   }
+
   async createDimension(dimension: Dimension): Promise<EntryHash> {
     const dimensionEh = await this.service.createDimension(dimension);
     this._appletConfig.update(appletConfig => {
@@ -113,32 +225,18 @@ export class SensemakerStore {
   }
 
   async createAssessment(assessment: CreateAssessmentInput): Promise<EntryHash> {
-    const assessmentEh = await this.service.createAssessment(assessment);
-    this._resourceAssessments.update(resourceAssessments => {
-      const maybePrevAssessments = resourceAssessments[encodeHashToBase64(assessment.resource_eh)];
-      const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
-      // TODO: here is an instance where returning the assessment instead of the hash would be useful
-      // NOTE: there will be a slight discrepancy between the assessment returned from the service and the one stored in the store
-      // because we are not returning the assessment, and so recreating the timestamp. This works enough for now, but would be worth it to change
-      // it such that the assessment itself is return.
-      resourceAssessments[encodeHashToBase64(assessment.resource_eh)] = [...prevAssessments, {...assessment, author: this.myAgentPubKey, timestamp: Date.now() * 1000}]
-      return resourceAssessments;
-    })
-    return assessmentEh;
+    const assessmentMap = await this.service.createAssessment(assessment);
+    this._updateAssessmentIndices(assessmentMap);
+    return decodeHashFromBase64(getAssessmentKey(assessmentMap)!);
   }
 
   async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getAssessment(assessmentEh) 
+    return await this.service.getAssessment(assessmentEh)
   }
 
   async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Record<EntryHashB64, Array<Assessment>>> {
-    const resourceAssessments = await this.service.getAssessmentsForResources(getAssessmentsInput);
-    // trying to update the store object properly so there is a detected difference between previous and new
-    this._resourceAssessments.update(resourceAssessmentsPrev => {
-      let resourceAssessmentsNew = {...resourceAssessmentsPrev, ...resourceAssessments};
-      return resourceAssessmentsNew;
-    });
-    return resourceAssessments;
+    const resourceAssessments: MapAssessmentsByHashByResource = await this.service.getAssessmentsForResources(getAssessmentsInput);
+    return this._updateResourceAssessmentIndices(resourceAssessments);
   }
   
   async createMethod(method: Method): Promise<EntryHash> {
@@ -151,14 +249,9 @@ export class SensemakerStore {
   }
 
   async runMethod(runMethodInput: RunMethodInput): Promise<Assessment> {
-    let assessment = await this.service.runMethod(runMethodInput);
-    this._resourceAssessments.update(resourceAssessments => {
-      const maybePrevAssessments = resourceAssessments[encodeHashToBase64(assessment.resource_eh)];
-      const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
-      resourceAssessments[encodeHashToBase64(runMethodInput.resource_eh)] = [...prevAssessments, assessment]
-      return resourceAssessments;
-    })
-    return assessment;
+    let assessmentMap = await this.service.runMethod(runMethodInput);
+    this._updateAssessmentIndices(assessmentMap);
+    return getAssessmentValue(assessmentMap)!;
   }
 
   async createCulturalContext(culturalContext: CulturalContext): Promise<EntryHash> {
