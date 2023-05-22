@@ -1,5 +1,5 @@
-import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
-import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
+import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, Record as HolochainRecord, RoleName } from '@holochain/client';
+import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, MapAssessmentsByHash, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput, VecAssessmentsByHash, MapAssessmentsByHashByResource } from './index';
 import { Option } from './utils';
 
 export class SensemakerService {
@@ -25,7 +25,7 @@ export class SensemakerService {
     return this.callZome('create_resource_def', resourceDef);
   }
 
-  async createAssessment(assessment: CreateAssessmentInput): Promise<EntryHash> {
+  async createAssessment(assessment: CreateAssessmentInput): Promise<MapAssessmentsByHash> {
     return this.callZome('create_assessment', assessment);
   }
 
@@ -33,7 +33,7 @@ export class SensemakerService {
     return this.callZome('get_assessment', assessmentEh);
   }
 
-  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Record<EntryHashB64, Array<Assessment>>> {
+  async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<MapAssessmentsByHashByResource> {
     return this.callZome('get_assessments_for_resources', getAssessmentsInput);
   }
   
@@ -41,7 +41,7 @@ export class SensemakerService {
     return this.callZome('create_method', method);
   }
 
-  async runMethod(runMethodInput: RunMethodInput): Promise<Assessment> {
+  async runMethod(runMethodInput: RunMethodInput): Promise<MapAssessmentsByHash> {
     return this.callZome('run_method', runMethodInput);
   }
 

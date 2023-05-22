@@ -19,11 +19,12 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - uses: cachix/install-nix-action@v18
+      - name: Install nix
+        uses: cachix/install-nix-action@v19
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.12.0/install
+          install_url: https://releases.nixos.org/nix/nix-2.13.3/install
           extra_nix_config: |
             experimental-features = flakes nix-command
             substituters = https://cache.nixos.org https://cache.holo.host https://ci-builds.cachix.org https://holochain-ci.cachix.org
@@ -33,7 +34,9 @@ jobs:
         run: |
           nix-env -iA cachix -f https://cachix.org/api/v1/install
           cachix use holochain-ci
+
+      - name: setup
+        run: nix develop --command bash -c "pnpm i --no-frozen-lockfile"
+
       - name: run-tests
-        run: |
-          cd $GITHUB_WORKSPACE
-          nix develop --command bash -c "npm ci && npm run test"
+        run: nix develop --command bash -c "pnpm test"

@@ -1,4 +1,4 @@
-import { DnaSource, Record, ActionHash, EntryHash, EntryHashB64, encodeHashToBase64 } from "@holochain/client";
+import { DnaSource, Record as HoloRecord, ActionHash, EntryHash, EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {
   pause,
   runScenario,
@@ -8,7 +8,17 @@ import {
   cleanAllConductors,
 } from "@holochain/tryorama";
 import { decode } from "@msgpack/msgpack";
-import { Assessment, AssessmentWithDimensionAndResource, CreateAssessmentInput, Method, RangeValueInteger, ResourceEh, GetAssessmentsForResourceInput } from "@neighbourhoods/client";
+import {
+  Method,
+  RangeValueInteger,
+  CreateAssessmentInput,
+  Assessment,
+  MapAssessmentsByHash,
+  getAssessmentKey,
+  getAssessmentValue,
+  AssessmentWithDimensionAndResource,
+  GetAssessmentsForResourceInput,
+} from "@neighbourhoods/client";
 import { ok } from "assert";
 import pkg from "tape-promise/tape";
 import { installAgent } from "../../utils";
@@ -126,7 +136,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created post
-        const readPostOutput: Record = await callZomeBob(
+        const readPostOutput: HoloRecord = await callZomeBob(
           "test_provider",
           "get_post",
           createPostEntryHash
@@ -185,7 +195,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created dimension
-        const createReadOutput: Record = await callZomeBob(
+        const createReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_dimension",
           createDimensionEntryHash,
@@ -197,7 +207,7 @@ export default () => {
         );
 
         // get all dimensions
-        const getDimensionsOutput: Record[] = await callZomeBob(
+        const getDimensionsOutput: HoloRecord[] = await callZomeBob(
           "sensemaker",
           "get_dimensions",
           null,
@@ -234,12 +244,15 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created resource type
-        const createResourceDefReadOutput: Record = await callZomeBob(
+        const createResourceDefReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_resource_def",
           createResourceDefEntryHash,
           true
         );
+        console.log(createResourceDefReadOutput, decode(
+          (createResourceDefReadOutput.entry as any).Present.entry
+        ) as any);
         t.deepEqual(
           createResourceDef,
           decode(
@@ -248,7 +261,7 @@ export default () => {
         );
 
         // create an assessment on the Post
-        const createAssessment: CreateAssessmentInput = {
+        const createAssessmentInput: CreateAssessmentInput = {
           value: { Integer: 2 },
           dimension_eh: createDimensionEntryHash,
           resource_eh: createPostEntryHash,
@@ -256,19 +269,20 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createAssessmentEntryHash: EntryHash = await callZomeAlice(
+        const createAssessmentReturn: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
-          createAssessment,
+          createAssessmentInput,
           true
         );
-        t.ok(createAssessmentEntryHash);
+        console.log(createAssessmentReturn);
+        t.ok(createAssessmentReturn);
 
         // Wait for the created entry to be propagated to the other node.
         await pause(pauseDuration);
 
         // create a second assessment on the Post
-        const createAssessment2: CreateAssessmentInput = {
+        const createAssessmentInput2: CreateAssessmentInput = {
           value: { Integer: 4 },
           dimension_eh: createDimensionEntryHash,
           resource_eh: createPostEntryHash,
@@ -276,27 +290,31 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createAssessmentEntryHash2: EntryHash = await callZomeAlice(
+        const createAssessmentReturn2: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
-          createAssessment2,
+          createAssessmentInput2,
           true
         );
-        t.ok(createAssessmentEntryHash2);
+        console.log(createAssessmentReturn2)
+        t.ok(createAssessmentReturn2);
 
         // Wait for the created entry to be propagated to the other node.
         await pause(pauseDuration);
 
+        console.log(getAssessmentKey(createAssessmentReturn))
+
         // Bob gets the created assessment
-        const createAssessmentReadOutput: Record = await callZomeBob(
+        const createAssessmentReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_assessment",
-          createAssessmentEntryHash,
+          getAssessmentKey(createAssessmentReturn),
           true
         );
+        console.log(createAssessmentReadOutput)
         const createAssessmentReadOutputDecoded = decode((createAssessmentReadOutput.entry as any).Present.entry) as Assessment;
         t.deepEqual(
-          { ...createAssessment, author: alice_agent_key, timestamp: createAssessmentReadOutputDecoded.timestamp },
+          { ...createAssessmentInput, author: alice_agent_key, timestamp: createAssessmentReadOutputDecoded.timestamp },
           createAssessmentReadOutputDecoded
         );
 
@@ -310,10 +328,19 @@ export default () => {
           getAssessmentsForResourceInput,
           true
         );
-        t.ok(assessmentsForResources[encodeHashToBase64(createPostEntryHash)].length === 2)
+        const assessmentsForResourcesValues = Object.values(assessmentsForResources[encodeHashToBase64(createPostEntryHash)])
+        t.ok(assessmentsForResourcesValues.length === 2)
         console.log('assessments for resource', assessmentsForResources)
-        t.ok(assessmentsForResources[encodeHashToBase64(createPostEntryHash)].find(assessment => JSON.stringify(assessment) === JSON.stringify({ ...createAssessment, author: alice_agent_key, timestamp: assessment.timestamp })))
-        t.ok(assessmentsForResources[encodeHashToBase64(createPostEntryHash)].find(assessment => JSON.stringify(assessment) === JSON.stringify({ ...createAssessment2, author: alice_agent_key, timestamp: assessment.timestamp })))
+        t.ok(assessmentsForResourcesValues.find(assessment => JSON.stringify(assessment) === JSON.stringify({
+            ...createAssessmentInput,
+            author: alice_agent_key,
+            timestamp: assessment.timestamp
+        })))
+        t.ok(assessmentsForResourcesValues.find(assessment => JSON.stringify(assessment) === JSON.stringify({
+          ...createAssessmentInput2,
+          author: alice_agent_key,
+          timestamp: assessment.timestamp
+        })))
 
         // define objective dimension
 
@@ -370,7 +397,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created method
-        const createMethodReadOutput: Record = await callZomeBob(
+        const createMethodReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_method",
           createMethodEntryHash,
@@ -387,12 +414,12 @@ export default () => {
           method_eh: createMethodEntryHash,
         };
 
-        const runMethodOutput: Assessment = await callZomeAlice(
+        const runMethodOutput = getAssessmentValue(await callZomeAlice(
           "sensemaker",
           "run_method",
           runMethodInput,
           true
-        );
+        ));
         t.ok(runMethodOutput);
 
         await pause(pauseDuration);
@@ -400,14 +427,14 @@ export default () => {
         const objectiveAssessment: Assessment = {
           value: {
             Integer:
-              (createAssessment.value as RangeValueInteger).Integer + (createAssessment2.value as RangeValueInteger).Integer,
+              (createAssessmentInput.value as RangeValueInteger).Integer + (getAssessmentValue(createAssessmentReturn2)!.value as RangeValueInteger).Integer,
           },
           dimension_eh: createObjectiveDimensionEntryHash,
           resource_eh: createPostEntryHash,
           resource_def_eh: createResourceDefEntryHash,
           maybe_input_dataset: null,
           author: alice_agent_key,
-          timestamp: runMethodOutput.timestamp,
+          timestamp: runMethodOutput!.timestamp,
         };
         t.deepEqual(
           objectiveAssessment,
@@ -423,6 +450,7 @@ export default () => {
       await cleanAllConductors();
     });
   });
+
   test("test context result creation", async (t) => {
     await runScenario(async (scenario) => {
       const {
@@ -514,7 +542,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created post
-        const readPostOutput: Record = await callZomeBob(
+        const readPostOutput: HoloRecord = await callZomeBob(
           "test_provider",
           "get_post",
           createPostEntryHash
@@ -559,7 +587,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created dimension
-        const createReadOutput: Record = await callZomeBob(
+        const createReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_dimension",
           createDimensionEntryHash,
@@ -593,7 +621,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created resource type
-        const createResourceDefReadOutput: Record = await callZomeBob(
+        const createResourceDefReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_resource_def",
           createResourceDefEntryHash,
@@ -615,13 +643,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP1AssessmentEntryHash: EntryHash = await callZomeAlice(
+        const createP1AssessmentReturn: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP1Assessment,
           true
         );
-        t.ok(createP1AssessmentEntryHash);
+        t.ok(createP1AssessmentReturn);
 
         // Wait for the created entry to be propagated to the other node.
         await pause(pauseDuration);
@@ -635,13 +663,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP1AssessmentEntryHash2: EntryHash = await callZomeAlice(
+        const createP1AssessmentReturn2: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP1Assessment2,
           true
         );
-        t.ok(createP1AssessmentEntryHash2);
+        t.ok(createP1AssessmentReturn2);
 
         const createP2Assessment: CreateAssessmentInput = {
           value: { Integer: 3 },
@@ -651,13 +679,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP2AssessmentEntryHash: EntryHash = await callZomeAlice(
+        const createP2AssessmentReturn: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP2Assessment,
           true
         );
-        t.ok(createP2AssessmentEntryHash);
+        t.ok(createP2AssessmentReturn);
 
         // create an assessment on the Post
         const createP2Assessment2: CreateAssessmentInput = {
@@ -668,13 +696,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP2AssessmentEntryHash2: EntryHash = await callZomeAlice(
+        const createP2AssessmentReturn2: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP2Assessment2,
           true
         );
-        t.ok(createP2AssessmentEntryHash2);
+        t.ok(createP2AssessmentReturn2);
 
         // Wait for the created entry to be propagated to the other node.
         await pause(pauseDuration);
@@ -688,13 +716,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP3AssessmentEntryHash: EntryHash = await callZomeAlice(
+        const createP3AssessmentReturn: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP3Assessment,
           true
         );
-        t.ok(createP3AssessmentEntryHash);
+        t.ok(createP3AssessmentReturn);
 
         const createP3Assessment2: CreateAssessmentInput = {
           value: { Integer: 2 },
@@ -704,13 +732,13 @@ export default () => {
           maybe_input_dataset: null,
         };
 
-        const createP3AssessmentEntryHash2: EntryHash = await callZomeAlice(
+        const createP3AssessmentReturn2: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "create_assessment",
           createP3Assessment2,
           true
         );
-        t.ok(createP3AssessmentEntryHash2);
+        t.ok(createP3AssessmentReturn2);
 
         // Wait for the created entry to be propagated to the other node.
         await pause(pauseDuration);
@@ -770,7 +798,7 @@ export default () => {
         await pause(pauseDuration);
 
         // Bob gets the created method
-        const createMethodReadOutput: Record = await callZomeBob(
+        const createMethodReadOutput: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_method",
           createMethodEntryHash,
@@ -787,7 +815,7 @@ export default () => {
           method_eh: createMethodEntryHash,
         };
 
-        const runMethodOutput: Assessment = await callZomeAlice(
+        const runMethodOutput: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "run_method",
           runMethodInput,
@@ -800,7 +828,7 @@ export default () => {
           method_eh: createMethodEntryHash,
         };
 
-        const runMethodOutput2: Assessment = await callZomeAlice(
+        const runMethodOutput2: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "run_method",
           runMethodInput2,
@@ -813,7 +841,7 @@ export default () => {
           method_eh: createMethodEntryHash,
         };
 
-        const runMethodOutput3: Assessment = await callZomeAlice(
+        const runMethodOutput3: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "run_method",
           runMethodInput3,
@@ -834,11 +862,11 @@ export default () => {
           resource_def_eh: createResourceDefEntryHash,
           maybe_input_dataset: null,
           author: alice_agent_key,
-          timestamp: runMethodOutput.timestamp,
+          timestamp: getAssessmentValue(runMethodOutput)!.timestamp,
         };
         t.deepEqual(
           objectiveAssessment,
-          runMethodOutput
+          getAssessmentValue(runMethodOutput)
         );
 
         const objectiveAssessment2: Assessment = {
@@ -852,11 +880,11 @@ export default () => {
           resource_def_eh: createResourceDefEntryHash,
           maybe_input_dataset: null,
           author: alice_agent_key,
-          timestamp: runMethodOutput2.timestamp,
+          timestamp: getAssessmentValue(runMethodOutput2)!.timestamp,
         };
         t.deepEqual(
           objectiveAssessment2,
-          runMethodOutput2
+          getAssessmentValue(runMethodOutput2)
         );
 
         const objectiveAssessment3: Assessment = {
@@ -870,11 +898,11 @@ export default () => {
           resource_def_eh: createResourceDefEntryHash,
           maybe_input_dataset: null,
           author: alice_agent_key,
-          timestamp: runMethodOutput3.timestamp,
+          timestamp: getAssessmentValue(runMethodOutput3)!.timestamp,
         };
         t.deepEqual(
           objectiveAssessment3,
-          runMethodOutput3
+          getAssessmentValue(runMethodOutput3)
         );
 
         // create context and threshold
@@ -934,7 +962,7 @@ export default () => {
         t.ok(createContextEntryHash3);
         await pause(pauseDuration);
 
-        const readCulturalContext: Record = await callZomeBob(
+        const readCulturalContext: HoloRecord = await callZomeBob(
           "sensemaker",
           "get_cultural_context",
           createContextEntryHash,
@@ -1021,14 +1049,14 @@ export default () => {
         }
 
         // fetch all assessments
-        const allAssessments: Array<AssessmentWithDimensionAndResource> = await callZomeAlice(
+        const allAssessments: Record<string, AssessmentWithDimensionAndResource> = await callZomeAlice(
           "sensemaker",
           "get_all_assessments",
           null,
           true
         );
         console.log('all assessments', allAssessments)
-        t.deepEqual(allAssessments.length, 9);
+        t.deepEqual(Object.values(allAssessments).length, 9);
 
       } catch (e) {
         console.log(e);
@@ -1040,6 +1068,7 @@ export default () => {
       await cleanAllConductors();
     });
   });
+
   test("average method computation", async (t) => {
     await runScenario(async (scenario) => {
       const {
@@ -1238,7 +1267,7 @@ export default () => {
           method_eh: createMethodEntryHash,
         };
 
-        const runMethodOutput: Assessment = await callZomeAlice(
+        const runMethodOutput: MapAssessmentsByHash = await callZomeAlice(
           "sensemaker",
           "run_method",
           runMethodInput,
@@ -1259,12 +1288,12 @@ export default () => {
           resource_def_eh: createResourceDefEntryHash,
           maybe_input_dataset: null,
           author: alice_agent_key,
-          timestamp: runMethodOutput.timestamp,
+          timestamp: getAssessmentValue(runMethodOutput)!.timestamp,
         };
-        
+
         t.deepEqual(
           objectiveAssessment,
-          runMethodOutput
+          getAssessmentValue(runMethodOutput)
         );
       } catch (e) {
         console.log(e);

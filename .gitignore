@@ -10,3 +10,4 @@ node_modules/
 .hc
 .running
 .DS_Store
+package-lock.json

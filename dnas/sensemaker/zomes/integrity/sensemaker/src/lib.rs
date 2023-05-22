@@ -9,7 +9,18 @@ mod range;
 mod resource_def;
 
 pub use applet::{AppletConfig, AppletConfigInput};
-pub use assessment::Assessment;
+pub use assessment::{
+    Assessment,
+    CreateAssessmentInput,
+    UpdateAssessmentInput,
+    GetAssessmentsForResourceInput,
+    AssessmentWithDimensionAndResource,
+    VecAssessmentsByHashInner,
+    VecAssessmentsByHash,
+    MapAssessmentsByHash,
+    MapAssessmentsByHashByResource,
+    MapAugmentedAssessmentsByHash
+};
 pub use cultural_context::{
     ContextResult, CulturalContext, OrderingKind, Threshold, ThresholdKind,
 };
