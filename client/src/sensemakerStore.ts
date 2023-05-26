@@ -255,21 +255,28 @@ export class SensemakerStore {
       return this._allAssessmentsBound$
     }
 
+    const rs = opts.resourceEhs
+    const ds = opts.dimensionEhs
+
     const result = this._allAssessments$.pipe(
       concatMap((value) => {
-        const resourcesFiltered: DimensionIndexedResults[] = opts.resourceEhs
-          ? [...opts.resourceEhs.reduce((acc, h) => {
+        const resourcesFiltered: DimensionIndexedResults[] = rs
+          ? [...rs.reduce((acc, h) => {
               value.get(h) || new Map()
               return acc
             }, new Map()).values()]
           : [...value.values()]
 
-        const dimsFiltered: Assessment[] = opts.dimensionEhs
-          ? resourcesFiltered.flatMap(dims => [...dims.entries()].flatMap(([h, As]) => opts.dimensionEhs?.includes(h) ? [...As] : []))
+        const dimsFiltered: Assessment[] = ds
+          ? resourcesFiltered.flatMap(dims => [...dims.entries()].flatMap(([h, As]) => ds?.includes(h) ? [...As] : []))
           : resourcesFiltered.flatMap(dims => [...dims.values()].flatMap(As => [...As]))
 
         return from(dimsFiltered)
       }),
+      // :TODO: only emit the above cached Assessments once, then unsubscribe from it and only receive from below?
+      mergeWith(this._assessments$.pipe(
+        filter(a => (!ds || ds.includes(a.dimension_eh)) && (!rs || rs.includes(a.resource_eh)))
+      )),
     )
 
     return rxWritable(undefined).subscribe(result)
