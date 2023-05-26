@@ -1,10 +1,11 @@
 import { AgentPubKey, AppAgentClient, AppSignal, RoleName, EntryHash, EntryHashB64, Record as HolochainRecord, encodeHashToBase64 } from '@holochain/client';
 import { derived, writable, Writable } from 'svelte/store';
-import { rxReplayableWritable as rxWritable } from 'svelte-fuse-rx';
+import { rxWritable } from 'svelte-fuse-rx';
 import {
-  of, filter, shareReplay, scan, map, mergeMap, mergeScan, mergeWith, groupBy, takeUntil,
+  of, from, filter, shareReplay, scan, map, merge, mergeMap, mergeScan, concatMap, mergeWith, groupBy, takeUntil,
   Subject, Observable, GroupedObservable, ObservableInput,
   tap,
+  Observer,
 } from 'rxjs';
 import { produce } from 'immer';
 import type { SignalPayload } from './signal';
@@ -18,33 +19,53 @@ import {
 } from './index';
 import type { Option } from './utils';
 
-// zome API output types
+// API output types
 
 export interface ContextResults {
   [culturalContextName: string]: ResourceEh[],
 }
 
-export type ResourceAssessmentResults = Map<EntryHashB64, Set<Assessment>>
-
-// SensemakerStore API inputs
+// API input types
 
 export interface assessmentsFilterOpts {
-  resourceEhs?: string[]
-  dimensionEhs?: string[]
+  resourceEhs?: ResourceEh[]
+  dimensionEhs?: DimensionEh[]
 }
 
-// external API interface for `Assessment` observables
+// external `SensemakerStore` API interface for `Assessment` observables
 
-export type StoreObservable<T> = Writable<T> & Subject<T> & Observable<T>
+type StoreObservable<T> = Writable<T> & Subject<T> & Observable<T>
+
+export type DimensionIndexedResult = Map<DimensionEh, Assessment>
+export type ResourceIndexedResult = Map<ResourceEh, Assessment>
+export type DimensionIndexedResults = Map<DimensionEh, Set<Assessment>>
+export type ResourceIndexedResults = Map<ResourceEh, Set<Assessment>>
+
+export type ResourceAssessmentsObservable = StoreObservable<DimensionIndexedResults>
+export type AssessmentDimensionsObservable = StoreObservable<ResourceIndexedResults>
 
 export type AssessmentObservable = StoreObservable<Assessment>
 
-export type AssessmentSetObservable = StoreObservable<Set<Assessment>>
+export type AssessmentSetObservable = StoreObservable<Set<Assessment>>  // :TODO: replace with `*IndexedResults`
 
-export type IndexedAssessments = Record<EntryHashB64, Assessment>
+// The main reason for indexing data this way would be to
+// allow quick mapping between it and the the view, which has
+// * `resource_def_eh`,
+// * `resource_eh`,
+// * a Resource,
+// * `dimension_eh`s for each objective assessment,
+// However, there are other ways of indexing these where
+// secondary indices are used instead of a nested object
+//
+// :TODO: do we want the leafmost `Assessment` Set split out into subjective/objective?
+//
+export type IndexedSensemakerData = Map<ResourceEh, DimensionIndexedResults>
 
-export type AssessmentDimensionsObservable = StoreObservable<IndexedAssessments>
-export type ResourceAssessmentsObservable = StoreObservable<IndexedAssessments>
+export type IndexedAssessmentsObservable = StoreObservable<IndexedSensemakerData>
+
+// internal types
+
+type IndexedAssessments = Record<EntryHashB64, Assessment>
 
 // `Assessment` stream filtering helpers
 
@@ -135,14 +156,6 @@ export class SensemakerStore {
   _appletConfig: Writable<AppletConfig> = writable({ dimensions: {}, resource_defs: {}, methods: {}, cultural_contexts: {}, name: "", role_name: "", ranges: {} });
   _contextResults: Writable<ContextResults> = writable({});
 
-  // Raw, unfiltered "source of truth" `Assessment` stream as `ReplaySubject`
-  // fed by asynchronous calls to zome APIs
-  _resourceAssessments: AssessmentObservable = rxWritable(undefined).pipe(
-    takeUntil(this._destroy),
-  )
-
-  _allResourceAssessments: AssessmentSetObservable
-
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
   /*
@@ -157,64 +170,109 @@ export class SensemakerStore {
   /** Static info */
   protected service?: SensemakerService;
 
+  /**
+   * raw unfiltered input/inbound `Observable` source emitting all `Assessment`
+   * records as they are loaded from zome API calls, peer signals or other I/O
+   */
+  protected _assessments$: Observable<Assessment>
+  protected _loadAssessment?: Observer<Assessment>
+
+  /**
+   * cached data structure pre-organising all loaded `Assessment` data for
+   * efficiently piping through output streams
+   */
+  protected _allAssessments$: Observable<IndexedSensemakerData>
+  // externally-facing Svelte-compatible interface to `_allAssessments$`
+  protected _allAssessmentsBound$: IndexedAssessmentsObservable
+
   constructor(
-    public client: AppAgentClient,
+    public client: AppAgentClient | null,
     public roleName: RoleName,
     public zomeName = 'sensemaker',
   ) {
+    // Bind Holochain websocket signal callbacks to provided `client`.
+    // To initialise or redefine client after instantiation, call
+    // `bindSocketClient` and `setService` manually.
     if (client) {
-      client.on("signal", (signal: AppSignal) => {
-        console.log("received signal in sensemaker store: ", signal)
-        const payload = (signal.payload as SignalPayload);
-
-        switch (payload.type) {
-          case "NewAssessment":
-            const assessment = payload.assessment;
-            this._resourceAssessments.update(resourceAssessments => {
-              const maybePrevAssessments = resourceAssessments[assessment.resource_eh];
-              const prevAssessments = maybePrevAssessments ? maybePrevAssessments : [];
-              resourceAssessments[assessment.resource_eh] = [...prevAssessments, assessment]
-              return resourceAssessments;
-            })
-            break;
-        }
-      });
-
+      this.bindSocketClient(client)
       this.setService(new SensemakerService(client, roleName))
     }
 
-    this._allResourceAssessments = asSet(this._resourceAssessments)
+    // Bind a raw source Observable that emits each newly loaded
+    // `Assessment` once. Does not cache.
+    this._assessments$ = new Observable(observer => {
+      this._loadAssessment = observer
+    })
+
+    // Configure a processing pipeline to cache all previously loaded
+    // `Assessment` entries.
+    this._allAssessments$ = this._assessments$.pipe(
+      // disconnect all listeners upon unmounting
+      takeUntil(this._destroy),
+      // continually emit newly merged data structure as `Assessments` come in
+      mergeScan<Assessment, IndexedSensemakerData>((acc, value) =>
+        of(produce(acc, draft => {
+          const r = value.resource_eh
+          const d = value.dimension_eh
+          const subslice = draft.get(r) || new Map()
+          subslice.set(d, value)
+          draft.set(r, subslice)
+        })),
+        new Map(),
+      ),
+      // cache only the most recently emitted value
+      shareReplay(1),
+    )
+
+    this._allAssessmentsBound$ = rxWritable(undefined).subscribe(this._allAssessments$)
   }
 
   setService(s: SensemakerService) {
     this.service = s
   }
 
+  bindSocketClient(client: AppAgentClient) {
+    client.on("signal", (signal: AppSignal) => {
+      if (!this._loadAssessment) throw new Error("SensemakerStore not yet initialised! Please defer execution until next eventloop tick.")
+
+      console.log("received signal in sensemaker store: ", signal)
+      const payload = (signal.payload as SignalPayload);
+
+      switch (payload.type) {
+        case "NewAssessment":
+          this._loadAssessment.next(payload.assessment)
+          break;
+      }
+    })
+  }
+
   /**
    * High-level API method for retrieving and filtering raw `Assessment` data from the Sensemaker backend
    */
-  resourceAssessments(opts?: assessmentsFilterOpts): AssessmentSetObservable {
-    // if no filtering parameters provided, return a merged Set of all Assessments
+  resourceAssessments(opts?: assessmentsFilterOpts): IndexedAssessmentsObservable {
+    // if no filtering parameters provided, return the cached mapping of all Assessments
     if (!opts || !(opts.resourceEhs || opts.dimensionEhs)) {
-      return this._allResourceAssessments
+      return this._allAssessmentsBound$
     }
 
-    let result = this._resourceAssessments
+    const result = this._allAssessments$.pipe(
+      concatMap((value) => {
+        const resourcesFiltered: DimensionIndexedResults[] = opts.resourceEhs
+          ? [...opts.resourceEhs.reduce((acc, h) => {
+              value.get(h) || new Map()
+              return acc
+            }, new Map()).values()]
+          : [...value.values()]
 
-    if (opts.resourceEhs) {
-      const matches = opts.resourceEhs
-      result = result.pipe(
-        filter(a => matches.indexOf(resourceID(a)) !== -1),
-      ) as AssessmentObservable
-    }
-    if (opts.dimensionEhs) {
-      const matches = opts.dimensionEhs
-      result = result.pipe(
-        filter(a => matches.indexOf(dimensionID(a)) !== -1),
-      ) as AssessmentObservable
-    }
+        const dimsFiltered: Assessment[] = opts.dimensionEhs
+          ? resourcesFiltered.flatMap(dims => [...dims.entries()].flatMap(([h, As]) => opts.dimensionEhs?.includes(h) ? [...As] : []))
+          : resourcesFiltered.flatMap(dims => [...dims.values()].flatMap(As => [...As]))
 
-    return asSet(result)
+        return from(dimsFiltered)
+      }),
+    )
+
+    return rxWritable(undefined).subscribe(result)
   }
 
   /// Accessor method to observe all known `Assessments` for the given `resourceEh`
@@ -335,7 +393,8 @@ export class SensemakerStore {
   }
 
   protected syncNewAssessments(assessments: Assessment[]) {
-    assessments.forEach(this._resourceAssessments.next.bind(this._resourceAssessments))
+    if (!this._loadAssessment) throw new Error("SensemakerStore not yet initialised! Please defer new Assessment syncing until next eventloop tick.")
+    assessments.forEach(this._loadAssessment.next.bind(this._loadAssessment))
   }
 
   async createMethod(method: Method): Promise<MethodEh> {
