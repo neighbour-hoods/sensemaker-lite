@@ -302,6 +302,21 @@ export default () => {
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost2)))
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost3)))
 
+
+        const resourceFromProvider: Record = await callZomeAlice(
+          "sensemaker",
+          "fetch_provider_resource",
+          {
+            resource_eh: createPostEntryHash,
+            resource_def_eh: appletConfig.resource_defs["angryPost"],
+          },
+          true
+        );
+        console.log('resource from provider', resourceFromProvider);
+        t.ok(resourceFromProvider);
+        t.deepEqual(decode((resourceFromProvider.entry as any).Present.entry) as any, createPost);
+
+
       } catch (e) {
         console.log(e);
         t.ok(null);
