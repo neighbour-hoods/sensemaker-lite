@@ -55,3 +55,8 @@ export interface WidgetRegistry {
         assess: typeof ConcreteAssessDimensionWidget,
     }
 }
+
+export interface FetchProviderResourceInput {
+    resource_eh: EntryHash,
+    resource_def_eh: EntryHash,
+}

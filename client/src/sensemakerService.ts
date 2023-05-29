@@ -1,5 +1,5 @@
 import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
-import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
+import { AppletConfig, AppletConfigInput, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, FetchProviderResourceInput, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput } from './index';
 import { Option } from './utils';
 
 export class SensemakerService {
@@ -63,6 +63,10 @@ export class SensemakerService {
 
   async registerApplet(appletConfig: CreateAppletConfigInput): Promise<AppletConfig> {
     return this.callZome('register_applet', appletConfig);
+  }
+
+  async fetchProviderResource(fetchProviderResourceInput: FetchProviderResourceInput): Promise<Option<HolochainRecord>> {
+    return this.callZome('fetch_provider_resource', fetchProviderResourceInput);
   }
 
   private callZome(fn_name: string, payload: any) {

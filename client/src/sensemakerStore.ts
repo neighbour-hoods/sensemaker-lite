@@ -260,6 +260,10 @@ export class SensemakerStore {
       }
     )
   }
+
+  async fetchProviderResource(resourceEh: EntryHash, resourceDefEh: EntryHash): Promise<Option<HolochainRecord>> {
+    return await this.service.fetchProviderResource({ resource_eh: resourceEh, resource_def_eh: resourceDefEh });
+  }
 }
 
 export const sensemakerStoreContext = createContext<SensemakerStore>(
