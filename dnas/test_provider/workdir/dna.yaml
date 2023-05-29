@@ -15,4 +15,5 @@ coordinator:
       bundled: ../../../target/wasm32-unknown-unknown/release/test_provider.wasm
       dependencies:
         - name: test_provider_integrity
-
+    - name: sensemaker_bridge
+      bundled: ../../../target/wasm32-unknown-unknown/release/sensemaker_bridge_zome.wasm

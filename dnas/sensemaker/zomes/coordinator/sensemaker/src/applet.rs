@@ -8,7 +8,7 @@ use sensemaker_integrity::{
 
 use crate::{
     create_cultural_context, create_dimension, create_method, create_range, create_resource_def,
-    utils::entry_from_record,
+    utils::{entry_from_record, fetch_provider_resource_inner},
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -147,4 +147,20 @@ pub fn create_entries_from_applet_config(
         })
         .collect::<ExternResult<Vec<ActionHash>>>()?;
     Ok((applet_config, applet_config_eh))
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct FetchProviderResourceInput {
+    pub resource_eh: EntryHash,
+    pub resource_def_eh: EntryHash,
+}
+
+#[hdk_extern]
+pub fn fetch_provider_resource(
+    FetchProviderResourceInput {
+        resource_eh,
+        resource_def_eh,
+    }: FetchProviderResourceInput
+) -> ExternResult<Option<Record>> {
+    fetch_provider_resource_inner(resource_eh, resource_def_eh)
 }

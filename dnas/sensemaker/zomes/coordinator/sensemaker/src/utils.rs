@@ -55,7 +55,7 @@ pub fn flatten_btree_map<K, V: Clone>(btree_map: BTreeMap<K, Vec<V>>) -> Vec<V> 
         .collect::<Vec<V>>()
 }
 
-pub fn fetch_provider_resource(
+pub fn fetch_provider_resource_inner(
     resource_eh: EntryHash,
     resource_def_eh: EntryHash,
 ) -> ExternResult<Option<Record>> {
@@ -73,7 +73,7 @@ pub fn fetch_provider_resource(
             if let Some(role_name) = applet_config.role_name {
                 let response = call(
                     CallTargetCell::OtherRole(role_name),
-                    ZomeName::from("test_provider"),
+                    ZomeName::from("sensemaker_bridge"),
                     "get_resource".into(),
                     None,
                     resource_eh,

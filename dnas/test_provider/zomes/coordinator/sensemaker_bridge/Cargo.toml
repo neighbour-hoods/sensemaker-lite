@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "sensemaker_bridge_zome"
+version = "0.0.1"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "sensemaker_bridge_zome"
+
+[dependencies]
+sensemaker_bridge = { path = "../../../../../../sensemaker-bridge/coordinator" }
