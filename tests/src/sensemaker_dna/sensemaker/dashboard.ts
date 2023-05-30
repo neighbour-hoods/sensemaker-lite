@@ -8,7 +8,7 @@ import {
   cleanAllConductors,
 } from "@holochain/tryorama";
 import { decode } from "@msgpack/msgpack";
-import { AppletConfig, Assessment, AssessmentWithDimensionAndResource, CreateAppletConfigInput, CreateAssessmentInput, Method, RangeValueInteger } from "@neighbourhoods/client";
+import { AppletConfig, Assessment, AssessmentWithDimensionAndResource, CreateAppletConfigInput, CreateAssessmentInput, FetchProviderResourceInput, Method, RangeValueInteger } from "@neighbourhoods/client";
 import { ok } from "assert";
 import pkg from "tape-promise/tape";
 import { installAgent, sampleAppletConfig } from "../../utils";
@@ -302,14 +302,15 @@ export default () => {
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost2)))
         t.ok(allAssessedPosts.find((p) => JSON.stringify(p) === JSON.stringify(createPost3)))
 
-
+        const fetchProviderResourceInput: FetchProviderResourceInput = {
+          resource_eh: createPostEntryHash,
+          resource_def_eh: appletConfig.resource_defs["angryPost"],
+          optional_role_name: null,
+        };
         const resourceFromProvider: Record = await callZomeAlice(
           "sensemaker",
           "fetch_provider_resource",
-          {
-            resource_eh: createPostEntryHash,
-            resource_def_eh: appletConfig.resource_defs["angryPost"],
-          },
+          fetchProviderResourceInput,
           true
         );
         console.log('resource from provider', resourceFromProvider);
