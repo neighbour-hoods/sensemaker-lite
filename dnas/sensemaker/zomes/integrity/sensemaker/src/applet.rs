@@ -4,7 +4,7 @@ use hdi::prelude::*;
 
 use crate::{
     CulturalContext, Dimension, Method, OrderingKind, Program, Range, RangeValue, ResourceDef,
-    ThresholdKind,
+    ThresholdKind, resource_def::ResourceDefSource,
 };
 
 #[hdk_entry_helper]
@@ -12,7 +12,7 @@ use crate::{
 pub struct AppletConfig {
     pub name: String,
     pub ranges: BTreeMap<String, EntryHash>,
-    pub role_name: Option<String>,
+    pub happ_info: BTreeMap<String, DnaHash>, // mapping role names to dna hashes of the applet happ
     pub dimensions: BTreeMap<String, EntryHash>,
     // the base_type field in ResourceDef needs to be bridged call
     pub resource_defs: BTreeMap<String, EntryHash>,
@@ -98,6 +98,7 @@ pub struct ConfigResourceDef {
     pub name: String,
     pub base_types: Vec<AppEntryDef>,
     pub dimensions: Vec<ConfigDimension>,
+    pub source: ResourceDefSource,
 }
 
 impl ConfigResourceDef {

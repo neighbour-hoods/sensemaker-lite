@@ -8,6 +8,13 @@ pub struct ResourceDef {
     pub name: String,
     pub base_types: Vec<AppEntryDef>,
     pub dimension_ehs: Vec<EntryHash>,
+    pub source: ResourceDefSource,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ResourceDefSource {
+    Dna(DnaHash),
+    // can add other source types here, like a website, IPFS, blockchain, etc.
 }
 
 impl TryFrom<ConfigResourceDef> for ResourceDef {
@@ -25,6 +32,7 @@ impl TryFrom<ConfigResourceDef> for ResourceDef {
             name: value.name,
             base_types: value.base_types,
             dimension_ehs,
+            source: value.source,
         };
         Ok(resource_def)
     }
