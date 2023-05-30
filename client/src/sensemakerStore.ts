@@ -39,6 +39,11 @@ import { derived, get, Writable, writable } from 'svelte/store';
 import { Option } from './utils';
 import { createContext } from '@lit-labs/context';
 
+export interface assessmentsFilterOpts {
+  resourceEhs?: EntryHashB64[] // :TODO: ResourceEh should be typed as B64 variant
+  dimensionEhs?: EntryHashB64[] // :TODO: DimensionEh should be typed as B64 variant
+}
+
 interface ContextResults {
   [culturalContextName: string]: EntryHash[],
 }
@@ -103,10 +108,10 @@ export class SensemakerStore {
   }
 
   // if provided a list of resource ehs, filter the assessments to only those resources, and return that object, otherwise return the whole thing.
-  resourceAssessments(resource_ehs?: Array<EntryHashB64>) {
+  resourceAssessments(opts?: assessmentsFilterOpts) {
     return derived(this._resourceAssessments, resourceAssessments => {
-      if(resource_ehs) {
-        const filteredResourceAssessments = resource_ehs.reduce((resourceSubsetAssessment, resource_eh) => {
+      if (opts && opts.resourceEhs) {
+        const filteredResourceAssessments = opts.resourceEhs.reduce((resourceSubsetAssessment, resource_eh) => {
           if (resourceAssessments.hasOwnProperty(resource_eh)) {
             resourceSubsetAssessment[resource_eh] = resourceAssessments[resource_eh];
           }
