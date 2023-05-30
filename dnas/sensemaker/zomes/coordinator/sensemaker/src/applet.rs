@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use hdk::prelude::*;
+use holo_hash::DnaHash;
 use sensemaker_integrity::{
     AppletConfig, AppletConfigInput, CulturalContext, Dimension, EntryTypes, LinkTypes, Method,
     ResourceDef,
@@ -153,6 +154,8 @@ pub fn create_entries_from_applet_config(
 pub struct FetchProviderResourceInput {
     pub resource_eh: EntryHash,
     pub resource_def_eh: EntryHash,
+    pub optional_role_name: Option<String>,
+    pub optional_dna_hash: Option<DnaHash>,
 }
 
 #[hdk_extern]
@@ -160,7 +163,9 @@ pub fn fetch_provider_resource(
     FetchProviderResourceInput {
         resource_eh,
         resource_def_eh,
+        optional_role_name,
+        optional_dna_hash,
     }: FetchProviderResourceInput
 ) -> ExternResult<Option<Record>> {
-    fetch_provider_resource_inner(resource_eh, resource_def_eh)
+    fetch_provider_resource_inner(resource_eh, resource_def_eh, optional_role_name, optional_dna_hash)
 }

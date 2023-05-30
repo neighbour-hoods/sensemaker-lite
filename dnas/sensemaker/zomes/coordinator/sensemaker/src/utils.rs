@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use hdk::prelude::*;
+use holo_hash::DnaHash;
 use sensemaker_integrity::{AppletConfig, Assessment, LinkTypes};
 
 use crate::{assessment_typed_path, get_assessment};
@@ -58,6 +59,8 @@ pub fn flatten_btree_map<K, V: Clone>(btree_map: BTreeMap<K, Vec<V>>) -> Vec<V> 
 pub fn fetch_provider_resource_inner(
     resource_eh: EntryHash,
     resource_def_eh: EntryHash,
+    optional_role_name: Option<String>,
+    optional_dna_hash: Option<DnaHash>,
 ) -> ExternResult<Option<Record>> {
     // make a bridge call to the provider zome
     let links = get_links(
@@ -70,25 +73,58 @@ pub fn fetch_provider_resource_inner(
         let maybe_record = get(EntryHash::from(link.target.clone()), GetOptions::default())?;
         if let Some(record) = maybe_record {
             let applet_config = entry_from_record::<AppletConfig>(record)?;
-            if let Some(role_name) = applet_config.role_name {
-                let response = call(
-                    CallTargetCell::OtherRole(role_name),
-                    ZomeName::from("sensemaker_bridge"),
-                    "get_resource".into(),
-                    None,
-                    resource_eh,
-                )?;
-                match response {
-                    ZomeCallResponse::Ok(result) => {
-                        let maybe_record: Option<Record> = result
-                            .decode()
-                            .map_err(|err| wasm_error!(WasmErrorInner::from(err)))?;
+            if let Some(stored_role_name) = applet_config.role_name {
+                let mut used_role_name = String::new();
+                let mut response: ZomeCallResponse;
 
-                        Ok(maybe_record)
+                if let Some(dna_hash) = optional_dna_hash {
+                    response = call(
+                        CallTargetCell::OtherCell(CellId::new(dna_hash, agent_info()?.agent_initial_pubkey)),
+                        ZomeName::from("sensemaker_bridge"),
+                        "get_resource".into(),
+                        None,
+                        resource_eh,
+                    )?;
+                    match response {
+                        ZomeCallResponse::Ok(result) => {
+                            let maybe_record: Option<Record> = result
+                                .decode()
+                                .map_err(|err| wasm_error!(WasmErrorInner::from(err)))?;
+
+                            Ok(maybe_record)
+                        }
+                        _ => Err(wasm_error!(WasmErrorInner::Guest(
+                            "Error making the bridge call to provider dna using the DNA Hash".into()
+                        ))),
                     }
-                    _ => Err(wasm_error!(WasmErrorInner::Guest(
-                        "Error making the bridge call to provider dna".into()
-                    ))),
+                }
+                else {
+                    if let Some(role_name) = optional_role_name {
+                        used_role_name = role_name;
+                    }
+                    else {
+                        used_role_name = stored_role_name;
+                    }
+                    let response = call(
+                        CallTargetCell::OtherRole(used_role_name),
+                        // CallTargetCell::OtherCell(CellId::new(dna_hash, agent_info()?.agent_initial_pubkey))
+                        ZomeName::from("sensemaker_bridge"),
+                        "get_resource".into(),
+                        None,
+                        resource_eh,
+                    )?;
+                    match response {
+                        ZomeCallResponse::Ok(result) => {
+                            let maybe_record: Option<Record> = result
+                                .decode()
+                                .map_err(|err| wasm_error!(WasmErrorInner::from(err)))?;
+    
+                            Ok(maybe_record)
+                        }
+                        _ => Err(wasm_error!(WasmErrorInner::Guest(
+                            "Error making the bridge call to provider dna".into()
+                        ))),
+                    }
                 }
             } else {
                 // resource type is not associated with a provider dna

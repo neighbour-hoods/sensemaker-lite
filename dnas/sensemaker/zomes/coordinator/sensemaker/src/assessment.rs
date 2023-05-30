@@ -114,7 +114,7 @@ pub fn get_all_assessments(_:()) -> ExternResult<Vec<AssessmentWithDimensionAndR
                         None => None
                     };
                     // attempt a bridge call to the provider zome to get the resource
-                    let resource = fetch_provider_resource_inner(assessment.resource_eh.clone(), assessment.resource_def_eh.clone())?;
+                    let resource = fetch_provider_resource_inner(assessment.resource_eh.clone(), assessment.resource_def_eh.clone(), None, None)?;
                     Ok(Some(AssessmentWithDimensionAndResource {
                         assessment,
                         dimension,
