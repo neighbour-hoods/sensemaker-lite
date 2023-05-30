@@ -1,4 +1,4 @@
-import { AgentPubKey, AppAgentClient, AppSignal, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
+import { AgentPubKey, AppAgentClient, AppSignal, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName, DnaHash } from '@holochain/client';
 import { SensemakerService } from './sensemakerService';
 import { AppletConfig, Assessment, ComputeContextInput, ConcreteAssessDimensionWidget, ConcreteDisplayDimensionWidget, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, ResourceDef, RunMethodInput, SignalPayload, WidgetMappingConfig, WidgetRegistry } from './index';
 import { derived, Writable, writable } from 'svelte/store';
@@ -261,8 +261,8 @@ export class SensemakerStore {
     )
   }
 
-  async fetchProviderResource(resourceEh: EntryHash, resourceDefEh: EntryHash): Promise<Option<HolochainRecord>> {
-    return await this.service.fetchProviderResource({ resource_eh: resourceEh, resource_def_eh: resourceDefEh });
+  async fetchProviderResource(resourceEh: EntryHash, resourceDefEh: EntryHash, roleName?: string, dnaHash?: DnaHash): Promise<Option<HolochainRecord>> {
+    return await this.service.fetchProviderResource({ resource_eh: resourceEh, resource_def_eh: resourceDefEh, optional_role_name: roleName ? roleName : null, optional_dna_hash: dnaHash ? dnaHash : null });
   }
 }
 

@@ -1,4 +1,4 @@
-import { EntryHash } from "@holochain/client";
+import { DnaHash, EntryHash } from "@holochain/client";
 import { ConfigCulturalContext } from "./culturalContext";
 import { ConfigDimension } from "./dimension";
 import { ConfigMethod } from "./method";
@@ -59,4 +59,6 @@ export interface WidgetRegistry {
 export interface FetchProviderResourceInput {
     resource_eh: EntryHash,
     resource_def_eh: EntryHash,
+    optional_role_name: string | null,
+    optional_dna_hash: DnaHash | null,
 }
