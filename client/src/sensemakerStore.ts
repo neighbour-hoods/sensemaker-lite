@@ -1,4 +1,14 @@
-import { AgentPubKey, AppAgentClient, AppSignal, encodeHashToBase64, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
+import {
+  AgentPubKey,
+  AppAgentClient,
+  AppSignal,
+  encodeHashToBase64,
+  decodeHashFromBase64,
+  EntryHash,
+  EntryHashB64,
+  Record as HolochainRecord,
+  RoleName
+} from '@holochain/client';
 import { SensemakerService } from './sensemakerService';
 import { AppletConfig, AppletConfigInput, AppletUIConfig, Assessment, ComputeContextInput, CreateAppletConfigInput, CreateAssessmentInput, CulturalContext, Dimension, DimensionEh, GetAssessmentsForResourceInput, Method, ResourceDef, ResourceDefEh, ResourceEh, RunMethodInput, SignalPayload } from './index';
 import { derived, get, Writable, writable } from 'svelte/store';
@@ -22,7 +32,7 @@ export class SensemakerStore {
   }
   */
   _resourceAssessments: Writable<{ [entryHash: string]: Array<Assessment> }> = writable({});
-  
+
   // TODO: we probably want there to be a default Applet UI Config, specified in the applet config or somewhere.
   _appletUIConfig: Writable<AppletUIConfig> = writable({});
   /*
@@ -56,7 +66,7 @@ export class SensemakerStore {
           break;
       }
     });
-    
+
     this.service = new SensemakerService(client, roleName);
     this.myAgentPubKey = this.service.myPubKey();
   }
@@ -128,7 +138,7 @@ export class SensemakerStore {
   }
 
   async getAssessment(assessmentEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getAssessment(assessmentEh) 
+    return await this.service.getAssessment(assessmentEh)
   }
 
   async getAssessmentsForResources(getAssessmentsInput: GetAssessmentsForResourceInput): Promise<Record<EntryHashB64, Array<Assessment>>> {
@@ -140,7 +150,7 @@ export class SensemakerStore {
     });
     return resourceAssessments;
   }
-  
+
   async createMethod(method: Method): Promise<EntryHash> {
     const methodEh = await this.service.createMethod(method);
     this._appletConfig.update(appletConfig => {
@@ -171,7 +181,7 @@ export class SensemakerStore {
   }
 
   async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getCulturalContext(culturalContextEh) 
+    return await this.service.getCulturalContext(culturalContextEh)
   }
 
   async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<EntryHash>> {
@@ -198,8 +208,8 @@ export class SensemakerStore {
   }
 
   async updateAppletUIConfig(
-    resourceDefEh: EntryHashB64, 
-    currentObjectiveDimensionEh: EntryHash, 
+    resourceDefEh: EntryHashB64,
+    currentObjectiveDimensionEh: EntryHash,
     currentCreateAssessmentDimensionEh: EntryHash,
     currentMethodEh: EntryHash
   ) {
@@ -208,7 +218,7 @@ export class SensemakerStore {
         display_objective_dimension: currentObjectiveDimensionEh,
         create_assessment_dimension: currentCreateAssessmentDimensionEh,
         method_for_created_assessment: currentMethodEh
-      } 
+      }
       return appletUIConfig;
     }
     )
