@@ -3,14 +3,11 @@ import {
   AppAgentClient,
   AppSignal,
   decodeHashFromBase64,
-  encodeHashToBase64,
   EntryHash,
   EntryHashB64,
   Record as HolochainRecord,
-  RecordEntry as HolochainRecordEntry,
   RoleName
 } from '@holochain/client';
-import { decode } from '@msgpack/msgpack';
 import { SensemakerService } from './sensemakerService';
 import {
   AppletConfig,
@@ -238,7 +235,7 @@ export class SensemakerStore {
     const resourceAssessments: MapAssessmentsByHashByResource = await this.service.getAssessmentsForResources(getAssessmentsInput);
     return this._updateResourceAssessmentIndices(resourceAssessments);
   }
-  
+
   async createMethod(method: Method): Promise<EntryHash> {
     const methodEh = await this.service.createMethod(method);
     this._appletConfig.update(appletConfig => {
@@ -264,7 +261,7 @@ export class SensemakerStore {
   }
 
   async getCulturalContext(culturalContextEh: EntryHash): Promise<HolochainRecord> {
-    return await this.service.getCulturalContext(culturalContextEh) 
+    return await this.service.getCulturalContext(culturalContextEh)
   }
 
   async computeContext(contextName: string, computeContextInput: ComputeContextInput): Promise<Array<EntryHash>> {
@@ -301,7 +298,7 @@ export class SensemakerStore {
         display_objective_dimension: currentObjectiveDimensionEh,
         create_assessment_dimension: currentCreateAssessmentDimensionEh,
         method_for_created_assessment: currentMethodEh
-      } 
+      }
       return appletUIConfig;
     }
     )
