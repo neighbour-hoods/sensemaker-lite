@@ -17,7 +17,7 @@ pub use dimension::Dimension;
 pub use method::{DataSet, Method, Program};
 pub use properties::{Properties, SensemakerConfig};
 pub use range::{Range, RangeValue};
-pub use resource_def::ResourceDef;
+pub use resource_def::{ResourceDef, ResourceDefSource};
 
 #[hdk_entry_defs]
 #[unit_enum(UnitEntryTypes)]
@@ -45,6 +45,7 @@ pub enum LinkTypes {
     AppletName,
     AppletConfig,
     ResourceDefEhToAppletConfig,
+    ResourceDefEhToProviderDnaHash,
     AllAgentsPath,
 }
 

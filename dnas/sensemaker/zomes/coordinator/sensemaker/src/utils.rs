@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 
 use hdk::prelude::*;
 use holo_hash::DnaHash;
-use sensemaker_integrity::{AppletConfig, Assessment, LinkTypes};
+use sensemaker_integrity::{AppletConfig, Assessment, LinkTypes, ResourceDef, ResourceDefSource};
 
-use crate::{assessment_typed_path, get_assessment};
+use crate::{assessment_typed_path, get_assessment, resource_def};
 
 pub fn entry_from_record<T: TryFrom<SerializedBytes, Error = SerializedBytesError>>(
     record: Record,
@@ -59,9 +59,25 @@ pub fn flatten_btree_map<K, V: Clone>(btree_map: BTreeMap<K, Vec<V>>) -> Vec<V> 
 pub fn fetch_provider_resource_inner(
     resource_eh: EntryHash,
     resource_def_eh: EntryHash,
-    optional_role_name: Option<String>,
-    optional_dna_hash: Option<DnaHash>,
 ) -> ExternResult<Option<Record>> {
+    // get the resource def from the eh
+    let maybe_resource_def_record = get(resource_def_eh.clone(), GetOptions::default())?;
+    // then read the source field of the resource def if it exists
+    let maybe_resource_def: Option<ResourceDef> = match maybe_resource_def_record {
+        Some(record) => Some(entry_from_record::<ResourceDef>(record)?),
+        None => None,
+    };
+    if let Some(resource_def) = maybe_resource_def {
+        match resource_def.source {
+            ResourceDefSource::Dna(dna_hash) => {
+                fetch_provider_resource_inner(resource_eh, resource_def_eh, Some(dna_hash), None)
+            }
+        }
+    } else {
+        Ok(None)
+    }
+
+
     // make a bridge call to the provider zome
     let links = get_links(
         resource_def_eh.clone(),
