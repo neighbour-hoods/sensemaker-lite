@@ -1464,6 +1464,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sensemaker_bridge"
+version = "0.0.1"
+dependencies = [
+ "hdk",
+]
+
+[[package]]
+name = "sensemaker_bridge_zome"
+version = "0.0.1"
+dependencies = [
+ "sensemaker_bridge",
+]
+
+[[package]]
 name = "sensemaker_integrity"
 version = "0.0.1"
 dependencies = [
