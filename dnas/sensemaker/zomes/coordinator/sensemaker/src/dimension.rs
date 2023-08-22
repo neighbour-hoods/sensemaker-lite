@@ -27,7 +27,8 @@ pub fn get_dimensions(_: ()) -> ExternResult<Vec<Option<Record>>> {
         None,
     )?
     .into_iter()
-    .map(|link| get_dimension(link.target.into()))
+    .filter_map(|link| link.target.into_entry_hash())
+    .map(|hash| get_dimension(hash))
     .collect::<ExternResult<Vec<Option<Record>>>>()
 }
 

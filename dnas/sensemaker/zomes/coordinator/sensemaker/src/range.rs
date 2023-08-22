@@ -28,7 +28,8 @@ pub fn get_ranges(_: ()) -> ExternResult<Vec<Option<Record>>> {
         None,
     )?
     .into_iter()
-    .map(|link| get_range(link.target.into()))
+    .filter_map(|link| link.target.into_entry_hash())
+    .map(|hash| get_range(hash))
     .collect::<ExternResult<Vec<Option<Record>>>>()
 }
 

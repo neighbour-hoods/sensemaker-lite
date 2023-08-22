@@ -15,16 +15,19 @@ pub fn get_latest_sensemaker_config(_: ()) -> ExternResult<Option<Record>> {
         .into();
 
     // get details of the first Sensemaker entry created in order to get all updates to it.
-    let links = get_links(ca_key, LinkTypes::CAToSensemakerConfig, None)?;
+    let hashes: Vec<EntryHash> = get_links(ca_key, LinkTypes::CAToSensemakerConfig, None)?
+      .iter()
+      .filter_map(|link| link.target.to_owned().into_entry_hash())
+      .collect();
 
     // return None if links is empty
-    if links.is_empty() {
+    if hashes.is_empty() {
         return Ok(None);
     }
 
     // get the SM config eh from first link assuming that there is only one sensemaker config created, since subsequent ones are all udpates.
     // can unwrap since links is not empty
-    let original_config_eh: EntryHash = links.get(0).unwrap().target.clone().into();
+    let original_config_eh: EntryHash = hashes.get(0).unwrap().to_owned();
     // get detail and immediately return None if None
     let detail = get_details(original_config_eh.clone(), GetOptions::default())?;
 

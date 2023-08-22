@@ -46,10 +46,12 @@ pub fn check_if_applet_config_exists(applet_name: String) -> ExternResult<Option
         LinkTypes::AppletConfig,
         None,
     )?;
-    let maybe_last_link = links.last();
+    let maybe_last_link = links.iter()
+      .filter_map(|link| link.target.to_owned().into_entry_hash())
+      .last();
 
-    if let Some(link) = maybe_last_link {
-        let maybe_record = get(EntryHash::from(link.clone().target), GetOptions::default())?;
+    if let Some(eh) = maybe_last_link {
+        let maybe_record = get(eh, GetOptions::default())?;
         if let Some(record) = maybe_record {
             Ok(Some(entry_from_record::<AppletConfig>(record)?))
         } else {

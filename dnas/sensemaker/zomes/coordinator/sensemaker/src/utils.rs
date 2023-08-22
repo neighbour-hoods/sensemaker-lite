@@ -27,13 +27,15 @@ pub fn get_assessments_for_resource_inner(
     let mut assessments: BTreeMap<EntryHash, Vec<Assessment>> = BTreeMap::new();
     for dimension_eh in dimension_ehs {
         let mut dimension_assessments: Vec<Assessment> = Vec::new();
-        let links = get_links(
+        let links: Vec<EntryHash> = get_links(
             assessment_typed_path(resource_eh.clone(), dimension_eh.clone())?.path_entry_hash()?,
             LinkTypes::Assessment,
             None,
-        )?;
-        for link in links {
-            let maybe_assessment = get_assessment(EntryHash::from(link.target))?;
+        )?.iter()
+          .filter_map(|link| link.target.to_owned().into_entry_hash())
+          .collect();
+        for eh in links {
+            let maybe_assessment = get_assessment(eh)?;
             if let Some(record) = maybe_assessment {
                 let assessment = entry_from_record::<Assessment>(record)?;
                 dimension_assessments.push(assessment)
@@ -65,9 +67,11 @@ pub fn fetch_provider_resource(
         LinkTypes::ResourceDefEhToAppletConfig,
         None,
     )?;
-    let maybe_link = links.last();
-    if let Some(link) = maybe_link {
-        let maybe_record = get(EntryHash::from(link.target.clone()), GetOptions::default())?;
+    let maybe_link = links.iter()
+      .filter_map(|link| link.target.to_owned().into_entry_hash())
+      .last();
+    if let Some(eh) = maybe_link {
+        let maybe_record = get(eh, GetOptions::default())?;
         if let Some(record) = maybe_record {
             let applet_config = entry_from_record::<AppletConfig>(record)?;
             if let Some(role_name) = applet_config.role_name {
