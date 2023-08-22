@@ -1,12 +1,8 @@
 {
   "name": "sensemaker_happ-dev",
   "private": true,
-  "workspaces": [
-    "ui",
-    "tests",
-    "client"
-  ],
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "start": "npm run network 2",
     "network": "hc s clean && npm run build:happ && concurrently-repeat \"npm run start:agent\"",
     "start:agent": "cross-env HC_PORT=$(port) concurrently -k \"npm run start:happ\" \"sleep 5 && cd ui && npm run start\"",
