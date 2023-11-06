@@ -3,9 +3,10 @@ import { Assessment, CreateAssessmentInput } from '../assessment';
 import { RangeValue } from '../range';
 import { EntryHash } from '@holochain/client';
 import { ScopedElementsMixin } from '@open-wc/scoped-elements';
+import '@open-wc/dedupe-mixin';
 import { LitElement } from 'lit';
 import { SensemakerStore } from '../sensemakerStore';
-import { html } from 'lit-html';
+import { html } from 'lit';
 
 interface IDimensionWidget {
     render(): TemplateResult
