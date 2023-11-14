@@ -1,5 +1,6 @@
 import { DnaSource, Record, ActionHash, EntryHash, AppEntryDef, encodeHashToBase64 } from "@holochain/client";
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
+import { AppletConfig } from "@neighbourhoods/client"
 import { decode } from "@msgpack/msgpack";
 import test from "tape-promise/tape";
 import { setUpAliceandBob } from "../utils";
