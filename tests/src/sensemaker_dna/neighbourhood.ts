@@ -1480,4 +1480,3 @@ import { setUpAliceandBob } from "../utils";
       await cleanAllConductors();
     });
   });
-};
