@@ -1,5 +1,5 @@
 import { AgentPubKey, AppAgentCallZomeRequest, AppAgentClient, EntryHash, EntryHashB64, Record as HolochainRecord, RoleName } from '@holochain/client';
-import { AppletConfig, AppletConfigInput, Assessment, AssessmentWidgetBlockConfig, AssessmentWidgetRegistration, ComputeContextInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, Range, ResourceDef, RunMethodInput } from './index';
+import { AppletConfig, AppletConfigInput, Assessment, AssessmentWidgetBlockConfig, AssessmentWidgetRegistration, AssessmentWidgetRegistrationInput, ComputeContextInput, CreateAssessmentInput, CulturalContext, Dimension, GetAssessmentsForResourceInput, Method, Range, ResourceDef, RunMethodInput } from './index';
 import { Option } from './utils';
 
 export class SensemakerService {
@@ -101,7 +101,7 @@ export class SensemakerService {
     return this.callZome('register_applet', appletConfig);
   }
   
-  async registerWidget(widgetRegistration: AssessmentWidgetRegistration) {
+  async registerWidget(widgetRegistration: AssessmentWidgetRegistrationInput) : Promise<AssessmentWidgetRegistration> {
     return this.callZome('register_widget', widgetRegistration, 'widgets');
   }
 
