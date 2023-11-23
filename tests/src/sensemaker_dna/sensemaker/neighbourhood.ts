@@ -12,7 +12,7 @@ import { decode } from "@msgpack/msgpack";
 import { Assessment, CreateAssessmentInput, Method, RangeValueInteger, ResourceEh, GetAssessmentsForResourceInput, RangeValueFloat } from "@neighbourhoods/client";
 import { ok } from "assert";
 import pkg from "tape-promise/tape";
-import { installAgent } from "../../utils";
+import { installAgent } from "../../utils.ts";
 const { test } = pkg;
 
 export const setUpAliceandBob = async (

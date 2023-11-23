@@ -11,8 +11,8 @@ import { decode } from "@msgpack/msgpack";
 import { AppletConfig, Assessment, CreateAssessmentInput, Method, RangeValueInteger } from "@neighbourhoods/client";
 import { ok } from "assert";
 import pkg from "tape-promise/tape";
-import { installAgent, sampleAppletConfig } from "../../utils";
-import { setUpAliceandBob } from './neighbourhood';
+import { installAgent, sampleAppletConfig } from "../../utils.ts";
+import { setUpAliceandBob } from './neighbourhood.ts';
 const { test } = pkg;
 
 interface TestPost {

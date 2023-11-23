@@ -4,7 +4,7 @@ import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 import { AppletConfig, AppletConfigInput, ConfigCulturalContext, ConfigMethod, ConfigResourceDef, ConfigThreshold, CreateAppletConfigInput, CulturalContext, Dimension, Method, Range, Threshold } from "@neighbourhoods/client";
 import pkg from "tape-promise/tape";
 
-import { setUpAliceandBob } from "./neighbourhood";
+import { setUpAliceandBob } from "./neighbourhood.ts";
 const { test } = pkg;
 
 const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };

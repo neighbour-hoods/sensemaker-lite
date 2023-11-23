@@ -2,7 +2,7 @@ import { DnaSource, Record, ActionHash, EntryHash, AppEntryDef, encodeHashToBase
 import { cleanAllConductors, pause, runScenario } from "@holochain/tryorama";
 import { decode } from "@msgpack/msgpack";
 import pkg from "tape-promise/tape";
-import { setUpAliceandBob } from "./neighbourhood";
+import { setUpAliceandBob } from "./neighbourhood.ts";
 import { AppletConfig } from "@neighbourhoods/client";
 const { test } = pkg;
 

@@ -5,8 +5,8 @@ import { decode } from '@msgpack/msgpack';
 import pkg from 'tape-promise/tape';
 const { test } = pkg;
 
-import { sensemakerDna } from "../../utils";
-import { setUpAliceandBob } from "./neighbourhood";
+import { sensemakerDna } from "../../utils.ts";
+import { setUpAliceandBob } from "./neighbourhood.ts";
 
 const app_entry_def: AppEntryDef = { entry_index: 0, zome_index: 0, visibility: { Public: null } };
 export default () => test("range CRUD tests", async (t) => {
