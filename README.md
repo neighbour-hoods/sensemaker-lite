@@ -1,3 +1,7 @@
+# Sensemaker-Lite has been Archived
+
+This repo has been merged into the https://github.com/neighbour-hoods/nh-launcher repo.
+
 <h1 align="center">
   <div>👋 Welcome to</div>
   <img src="https://neighbourhoods.network/visual-assets/nh-white-banner.png" alt="Logo" width="500">
